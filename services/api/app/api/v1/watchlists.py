@@ -95,6 +95,31 @@ async def add_item(
     return item
 
 
+@router.post(
+    "/{watchlist_id}/assets",
+    response_model=WatchlistItemOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def add_asset_alias(
+    watchlist_id: int, body: WatchlistItemCreate,
+    session: SessionDep, user: CurrentUserDep,
+) -> WatchlistItem:
+    """Spec §10 alias of POST /items — same body, same behavior."""
+    return await add_item(watchlist_id, body, session, user)
+
+
+@router.delete(
+    "/{watchlist_id}/assets/{item_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def remove_asset_alias(
+    watchlist_id: int, item_id: int,
+    session: SessionDep, user: CurrentUserDep,
+) -> None:
+    """Spec §10 alias of DELETE /items/{id}."""
+    await remove_item(watchlist_id, item_id, session, user)
+
+
 @router.delete("/{watchlist_id}/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_item(
     watchlist_id: int,

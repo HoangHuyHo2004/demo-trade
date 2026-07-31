@@ -22,6 +22,12 @@ from app.api.v1 import (
     signals,
     watchlists,
 )
+from app.api.v1 import (
+    jobs as jobs_v1,
+)
+from app.api.v1 import (
+    settings as settings_v1,
+)
 from app.core.config import get_settings
 from app.core.logging import configure_logging, get_logger
 from app.core.middleware import (
@@ -113,3 +119,5 @@ app.include_router(agent.router, prefix="/api/v1/agent", tags=["agent"])
 app.include_router(research.router, prefix="/api/v1/research", tags=["research"])
 app.include_router(portfolios.router, prefix="/api/v1/portfolios", tags=["portfolios"])
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
+app.include_router(jobs_v1.router, prefix="/api/v1/jobs", tags=["jobs"])
+app.include_router(settings_v1.router, prefix="/api/v1/settings", tags=["settings"])

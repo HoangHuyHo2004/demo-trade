@@ -298,9 +298,31 @@ def _build_payload(
     last_bar_time = bars[-1].bar_time if bars else None
     data_fresh_seconds = int((as_of - last_bar_time).total_seconds()) if last_bar_time else -1
     expected_holding = {"1D": 1, "5D": 5, "20D": 20}[horizon]
+    data_source = bars[-1].source if bars else "unknown"
+    # Spec §9: data_freshness as an enum. Thresholds: <2h = CURRENT,
+    # <7d = STALE, else UNAVAILABLE. Crypto (24/7) uses a tighter bound.
+    if data_fresh_seconds < 0:
+        data_freshness = "UNAVAILABLE"
+    elif asset.calendar == "24x7":
+        data_freshness = "CURRENT" if data_fresh_seconds < 3600 else "STALE"
+    else:
+        data_freshness = (
+            "CURRENT" if data_fresh_seconds < 26 * 3600  # ~1 trading day
+            else "STALE"
+        )
+    expected_holding_period = {"1D": "1 trading day", "5D": "3-7 trading days",
+                                "20D": "10-30 trading days"}[horizon]
+    combined_warnings = list(out.liquidity_warnings) + list(out.contradictions)
     return {
         "asset_id": asset.canonical_id,
         "as_of": as_of.isoformat(),
+        # Spec §9 field names (canonical going forward)
+        "model_version": model.code,
+        "data_source": data_source,
+        "data_freshness": data_freshness,
+        "expected_holding_period": expected_holding_period,
+        "warnings": combined_warnings,
+        # Existing / aliased fields (kept for back-compat with the current UI)
         "data_fresh_seconds": data_fresh_seconds,
         "horizon": horizon,
         "classification": classification,
@@ -329,7 +351,7 @@ def _build_payload(
         "data_quality_score": out.data_quality,
         "regime": out.regime,
         "backtest": None,   # attached by the backtest API when requested
-        "strategy_version": model.code,
+        "strategy_version": model.code,   # alias of model_version
         "data_version": data_version,
         "generated_at": datetime.now(UTC).isoformat(),
         "disclaimer": _DISCLAIMER,
@@ -339,9 +361,17 @@ def _build_payload(
 def _insufficient_data_payload(
     asset: Asset, as_of: datetime, horizon: str, model: SignalModel, n_bars: int,
 ) -> dict:
+    period = {"1D": "1 trading day", "5D": "3-7 trading days",
+              "20D": "10-30 trading days"}[horizon]
+    warn = [f"only {n_bars} bars available; need >= 10"]
     return {
         "asset_id": asset.canonical_id,
         "as_of": as_of.isoformat(),
+        "model_version": model.code,
+        "data_source": "none",
+        "data_freshness": "UNAVAILABLE",
+        "expected_holding_period": period,
+        "warnings": list(warn),
         "data_fresh_seconds": -1,
         "horizon": horizon,
         "classification": "INSUFFICIENT_DATA",
@@ -352,7 +382,7 @@ def _insufficient_data_payload(
         "entry_zone": None, "invalidation": None, "take_profit": None,
         "positive_factors": [], "negative_factors": [],
         "contradictions": [],
-        "liquidity_warnings": [f"only {n_bars} bars available; need >= 10"],
+        "liquidity_warnings": warn,
         "data_quality_score": 0.0,
         "regime": "UNKNOWN",
         "backtest": None,

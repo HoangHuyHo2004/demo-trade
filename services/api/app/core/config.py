@@ -46,6 +46,10 @@ class Settings(BaseSettings):
     # market to the deterministic mock provider. Used by the test suite
     # (and available as an escape hatch in production).
     use_mock_providers_only: bool = False
+    # When true, POST /backtests runs the job inline in the request
+    # thread rather than enqueueing it via Celery. Used by tests and by
+    # single-node demo installs without a Redis broker.
+    use_sync_jobs: bool = False
     coinbase_api_url: str = "https://api.exchange.coinbase.com"
     alpaca_api_key: str = ""
     alpaca_api_secret: str = ""

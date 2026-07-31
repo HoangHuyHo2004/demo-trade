@@ -3,6 +3,7 @@ from app.models.agent import AgentRun, AuditLog, Source, ToolCall  # noqa: F401
 from app.models.asset import Asset, AssetAlias  # noqa: F401
 from app.models.exchange import Exchange  # noqa: F401
 from app.models.ingest import BarIngestRun  # noqa: F401
+from app.models.job import Job, JobKind, JobStatus  # noqa: F401
 from app.models.market_data import PriceBar, Quote  # noqa: F401
 from app.models.portfolio import (  # noqa: F401
     PaperTransaction,
@@ -11,6 +12,13 @@ from app.models.portfolio import (  # noqa: F401
     TxKind,
 )
 from app.models.provider import ProviderStatus  # noqa: F401
+from app.models.settings_alert import (  # noqa: F401
+    Alert,
+    AlertKind,
+    AlertStatus,
+    RiskDisplay,
+    UserSettings,
+)
 from app.models.signal import (  # noqa: F401
     BacktestEquityPoint,
     BacktestRun,

@@ -145,6 +145,8 @@ async def test_signals_and_backtest_endpoints(session, client):
     assert p["strategy_version"] == "ensemble-v1"
     assert p["horizon"] == "5D"
 
+    # Async job path (spec §14). With USE_SYNC_JOBS=true set in conftest,
+    # the response body already carries the COMPLETE state + result.
     r = await client.post("/api/v1/backtests", json={
         "asset_canonical_id": "EQUITY:US:NASDAQ:AAPL",
         "interval": "1d",
@@ -152,15 +154,21 @@ async def test_signals_and_backtest_endpoints(session, client):
         "entry_threshold": 20,
         "exit_threshold": -5,
     })
-    assert r.status_code == 201, r.text
-    run = r.json()
-    assert run["id"] > 0
-    assert "metrics" in run
-    assert "equity" in run
+    assert r.status_code == 202, r.text
+    job = r.json()
+    assert job["job_id"].startswith("backtest_")
+    assert job["kind"] == "backtest"
+    # With USE_SYNC_JOBS=true the inline runner already finished.
+    assert job["status"] in {"COMPLETE", "QUEUED", "CALCULATING"}
 
-    r2 = await client.get(f"/api/v1/backtests/{run['id']}")
+    # Poll the job endpoint.
+    r2 = await client.get(f"/api/v1/jobs/{job['job_id']}")
     assert r2.status_code == 200
-    assert r2.json()["id"] == run["id"]
+    body = r2.json()
+    assert body["job_id"] == job["job_id"]
+    assert body["status"] == "COMPLETE"
+    assert body["result"] is not None
+    assert "metrics" in body["result"]
 
 
 @pytest.mark.asyncio

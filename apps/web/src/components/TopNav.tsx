@@ -16,6 +16,7 @@ export function TopNav() {
             <Link href="/compare" className="hover:underline">Compare</Link>
             <Link href="/research" className="hover:underline">Research</Link>
             <Link href="/portfolio" className="hover:underline">Portfolio</Link>
+            <Link href="/settings" className="hover:underline">Settings</Link>
           </nav>
           <AuthButton />
         </div>

@@ -31,13 +31,45 @@ from app.quant.models_base import (
     SignalModel,
 )
 
-_WEIGHTS = {
-    "trend": 0.30,
-    "momentum": 0.25,
-    "volatility": 0.15,
-    "volume": 0.15,
-    "benchmark": 0.15,
+# Per-market weight profiles (spec §8: "Do not use identical signal
+# weights for every market.").
+#
+# US equities behave differently from VN equities (lower turnover, less
+# liquid) and again from 24/7 crypto (higher realized vol, no session
+# gaps, no benchmark that's uncorrelated with the asset). Weights differ
+# modestly rather than dramatically so behavior stays predictable when
+# a single asset switches market classification.
+_WEIGHTS_BY_MARKET: dict[str, dict[str, float]] = {
+    # Trend + momentum dominant; benchmark (SPY) is a real signal.
+    "US":       {"trend": 0.30, "momentum": 0.25, "volatility": 0.15,
+                 "volume": 0.15, "benchmark": 0.15},
+    # VN: less mature market, lower average daily volume → volume signal
+    # is noisier, benchmark (VN-Index) is heavily weighted by a few names
+    # → down-weight benchmark.
+    "VN":       {"trend": 0.35, "momentum": 0.25, "volatility": 0.20,
+                 "volume": 0.10, "benchmark": 0.10},
+    # Crypto: 24/7 trading + no fundamental anchor → give more weight to
+    # trend/momentum, penalize volatility harder; BTC vs alt "benchmark"
+    # relationship is real so keep the factor but weight lower.
+    "COINBASE": {"trend": 0.30, "momentum": 0.30, "volatility": 0.20,
+                 "volume": 0.10, "benchmark": 0.10},
+    "KRAKEN":   {"trend": 0.30, "momentum": 0.30, "volatility": 0.20,
+                 "volume": 0.10, "benchmark": 0.10},
+    "BINANCE":  {"trend": 0.30, "momentum": 0.30, "volatility": 0.20,
+                 "volume": 0.10, "benchmark": 0.10},
 }
+
+# Fallback matches the historical single-profile behavior — used when
+# a new market is added before a profile is defined.
+_DEFAULT_WEIGHTS = _WEIGHTS_BY_MARKET["US"]
+
+
+def weights_for(market: str) -> dict[str, float]:
+    return _WEIGHTS_BY_MARKET.get(market.upper(), _DEFAULT_WEIGHTS)
+
+
+# Kept for tests / callers that still reference the constant by name.
+_WEIGHTS = _DEFAULT_WEIGHTS
 
 # Minimum bars required to compute the full factor set. Below this we
 # still produce a score, but data_quality is depressed and downstream
@@ -222,16 +254,19 @@ class RuleBasedEnsemble(SignalModel):
             elif slope < -0.03:
                 regime = "BEAR"
 
+        # ---- Per-market weights (spec §8) ----
+        weights = weights_for(si.market)
+
         # ---- Data-quality score ----
         # 1.0 when we have >= _MIN_BARS bars and every category contributed.
         cats_hit = {c.category for c in contributions}
-        cats_ok = len(cats_hit & _WEIGHTS.keys()) / len(_WEIGHTS)
+        cats_ok = len(cats_hit & weights.keys()) / len(weights)
         len_ok = min(1.0, n / _MIN_BARS)
         data_quality = round(0.5 * cats_ok + 0.5 * len_ok, 3)
 
         # ---- Aggregate ----
         # Per-category mean contribution × category weight
-        by_cat: dict[str, list[float]] = {k: [] for k in _WEIGHTS}
+        by_cat: dict[str, list[float]] = {k: [] for k in weights}
         for c in contributions:
             if c.category in by_cat:
                 by_cat[c.category].append(c.contribution)
@@ -239,8 +274,8 @@ class RuleBasedEnsemble(SignalModel):
         total_w = 0.0
         for cat, values in by_cat.items():
             if values:
-                weighted += (sum(values) / len(values)) * _WEIGHTS[cat]
-                total_w += _WEIGHTS[cat]
+                weighted += (sum(values) / len(values)) * weights[cat]
+                total_w += weights[cat]
         if total_w > 0:
             score = weighted / total_w  # normalize by covered weight
         else:

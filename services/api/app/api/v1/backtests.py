@@ -5,18 +5,27 @@ from dataclasses import asdict
 from datetime import UTC, datetime
 from decimal import Decimal
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from app.deps import SessionDep
+from app.core.config import get_settings
+from app.core.logging import get_logger
+from app.deps import CurrentUserDep, SessionDep
 from app.models.asset import Asset
 from app.models.signal import BacktestEquityPoint, BacktestRun, BacktestTrade
 from app.services.backtester import BacktestParams, run_backtest
+from app.services.jobs import (
+    JobKind,
+    create_job,
+    job_to_dict,
+    run_backtest_job_inline,
+)
 from app.services.signal_engine import _get_or_create_model_version, get_model
 
 router = APIRouter()
+log = get_logger(__name__)
 
 
 class BacktestRequest(BaseModel):
@@ -32,8 +41,79 @@ class BacktestRequest(BaseModel):
     slippage_bps: float | None = Field(None, ge=0.0, le=500.0)
 
 
-@router.post("", status_code=status.HTTP_201_CREATED)
-async def create_backtest(body: BacktestRequest, session: SessionDep) -> dict:
+@router.post("", status_code=status.HTTP_202_ACCEPTED)
+async def create_backtest(
+    body: BacktestRequest, response: Response,
+    session: SessionDep, user: CurrentUserDep,
+) -> dict:
+    """Enqueue a backtest job (spec §14).
+
+    Returns 202 with ``{job_id, status}``. Poll ``GET /api/v1/jobs/{job_id}``
+    for progress. When Celery is unavailable (tests / demo installs
+    without Redis), the setting ``USE_SYNC_JOBS=true`` runs the job
+    inline before responding so the response already contains the final
+    result.
+    """
+    # Fast validation up-front so a broken request doesn't create a
+    # dangling job row.
+    asset = (await session.execute(
+        select(Asset).where(Asset.canonical_id == body.asset_canonical_id)
+    )).scalar_one_or_none()
+    if asset is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="asset not found")
+    try:
+        get_model(body.model)
+    except KeyError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+
+    payload = {
+        "asset_canonical_id": body.asset_canonical_id,
+        "interval": body.interval,
+        "horizon": body.horizon,
+        "entry_threshold": body.entry_threshold,
+        "exit_threshold": body.exit_threshold,
+        "cost_bps": body.cost_bps,
+        "slippage_bps": body.slippage_bps,
+        "lookback_days": _lookback_days_from_range(body),
+    }
+    job = await create_job(
+        session, kind=JobKind.BACKTEST.value,
+        user_id=user.id, payload=payload,
+    )
+
+    settings = get_settings()
+    if settings.use_sync_jobs:
+        await run_backtest_job_inline(session, job)
+        await session.refresh(job)
+    else:
+        try:
+            # Late import so tests don't require celery installed.
+            from worker.celery_app import app as celery_app
+            celery_app.send_task(
+                "worker.tasks.run_backtest_job",
+                args=[job.public_id],
+            )
+        except Exception as e:  # noqa: BLE001
+            # Celery unreachable → transparently fall back to inline so
+            # a demo install without Redis still works.
+            log.warning("celery_send_task_failed_fallback_sync", err=str(e))
+            await run_backtest_job_inline(session, job)
+            await session.refresh(job)
+
+    response.headers["Location"] = f"/api/v1/jobs/{job.public_id}"
+    return job_to_dict(job)
+
+
+def _lookback_days_from_range(body: BacktestRequest) -> int:
+    if body.start and body.end:
+        return max(1, (body.end - body.start).days)
+    return 365
+
+
+@router.post("/sync", status_code=status.HTTP_201_CREATED)
+async def create_backtest_sync(
+    body: BacktestRequest, session: SessionDep, user: CurrentUserDep,
+) -> dict:
     asset = (await session.execute(
         select(Asset).where(Asset.canonical_id == body.asset_canonical_id)
     )).scalar_one_or_none()

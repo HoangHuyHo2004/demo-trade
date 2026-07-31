@@ -107,7 +107,25 @@ export const api = {
   getPortfolioRisk: (id: number, lookback_days = 180) =>
     req<PortfolioRisk>(
       `/api/v1/portfolios/${id}/risk?lookback_days=${lookback_days}`
-    )
+    ),
+  getSettings: () => req<UserSettingsShape>(`/api/v1/settings`),
+  patchSettings: (body: Partial<UserSettingsShape>) =>
+    req<UserSettingsShape>(`/api/v1/settings`, {
+      method: "PATCH",
+      body: JSON.stringify(body)
+    })
 };
+
+export interface UserSettingsShape {
+  email: string;
+  display_name: string;
+  base_currency: string;
+  locale: "en" | "vi";
+  timezone: string;
+  risk_display: "BOTH" | "LEVEL_ONLY" | "SCORE_ONLY";
+  signal_horizon_default: "1D" | "5D" | "20D";
+  theme: "light" | "dark" | "system";
+  notifications_email: boolean;
+}
 
 export const runtime = cfg;

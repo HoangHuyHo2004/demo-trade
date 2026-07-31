@@ -10,6 +10,8 @@ os.environ["API_SECRET_KEY"] = "test-secret-key-longer-than-thirty-two-chars-abc
 os.environ["USE_MOCK_PROVIDERS_ONLY"] = "true"
 # Force in-memory rate limiter (no Redis reachable in tests)
 os.environ["REDIS_URL"] = ""
+# Backtest jobs run inline in the request thread (no Celery in tests)
+os.environ["USE_SYNC_JOBS"] = "true"
 
 import asyncio  # noqa: E402
 from collections.abc import AsyncIterator  # noqa: E402
