@@ -1,0 +1,81 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-demotrade}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-demotrade}
+      POSTGRES_DB: ${POSTGRES_DB:-demotrade}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-demotrade}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/api.Dockerfile
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-demotrade}:${POSTGRES_PASSWORD:-demotrade}@postgres:5432/${POSTGRES_DB:-demotrade}
+      ALEMBIC_DATABASE_URL: postgresql://${POSTGRES_USER:-demotrade}:${POSTGRES_PASSWORD:-demotrade}@postgres:5432/${POSTGRES_DB:-demotrade}
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    command: >
+      sh -c "alembic upgrade head &&
+             python -m scripts.seed &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+  worker:
+    build:
+      context: .
+      dockerfile: infra/api.Dockerfile
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-demotrade}:${POSTGRES_PASSWORD:-demotrade}@postgres:5432/${POSTGRES_DB:-demotrade}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      PYTHONPATH: /app/services/worker:/app/services/api
+    depends_on:
+      api:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    command: celery -A worker.celery_app:app worker -B --loglevel=INFO
+
+  web:
+    build:
+      context: .
+      dockerfile: infra/web.Dockerfile
+    env_file: .env
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_started
+
+volumes:
+  pgdata:

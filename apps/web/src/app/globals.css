@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light dark;
+}
+
+html, body {
+  background: #f7f8fa;
+  color: #0f172a;
+}
+
+@media (prefers-color-scheme: dark) {
+  html, body {
+    background: #0b0d10;
+    color: #e6e8ec;
+  }
+}
+
+.mono { font-variant-numeric: tabular-nums; }

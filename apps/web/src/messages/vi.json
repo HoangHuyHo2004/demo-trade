@@ -1,0 +1,17 @@
+{
+  "app.name": "DEMO-TRADE",
+  "nav.dashboard": "Bảng điều khiển",
+  "nav.watchlist": "Danh sách theo dõi",
+  "nav.search": "Tìm kiếm",
+  "dashboard.title": "Bảng điều khiển",
+  "dashboard.markets": "Thị trường",
+  "dashboard.watchlist": "Danh sách theo dõi",
+  "dashboard.providers": "Nhà cung cấp dữ liệu",
+  "watchlist.title": "Danh sách theo dõi",
+  "watchlist.empty": "Chưa có tài sản nào trong danh sách.",
+  "watchlist.add": "Thêm",
+  "asset.quote": "Giá",
+  "asset.chart": "Biểu đồ",
+  "asset.signal": "Tín hiệu (Giai đoạn 3)",
+  "disclaimer.short": "Chỉ dành cho mục đích nghiên cứu/giáo dục. Không phải là lời khuyên đầu tư."
+}

@@ -1,0 +1,17 @@
+{
+  "app.name": "DEMO-TRADE",
+  "nav.dashboard": "Dashboard",
+  "nav.watchlist": "Watchlist",
+  "nav.search": "Search",
+  "dashboard.title": "Dashboard",
+  "dashboard.markets": "Markets",
+  "dashboard.watchlist": "Watchlist",
+  "dashboard.providers": "Data providers",
+  "watchlist.title": "Watchlists",
+  "watchlist.empty": "No assets on this watchlist yet.",
+  "watchlist.add": "Add",
+  "asset.quote": "Quote",
+  "asset.chart": "Chart",
+  "asset.signal": "Signal (Phase 3)",
+  "disclaimer.short": "Educational/research use only. Not investment advice."
+}

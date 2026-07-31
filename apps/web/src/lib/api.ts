@@ -1,0 +1,53 @@
+import { readRuntimeConfig } from "@demo-trade/config";
+import type {
+  Asset,
+  BarsResponse,
+  MarketStatus,
+  ProviderStatus,
+  Quote,
+  Watchlist
+} from "@demo-trade/contracts";
+
+const cfg = readRuntimeConfig(
+  typeof process !== "undefined" ? (process.env as Record<string, string | undefined>) : {}
+);
+
+async function req<T>(path: string, init?: RequestInit): Promise<T> {
+  const url = `${cfg.apiBaseUrl}${path}`;
+  const res = await fetch(url, {
+    ...init,
+    headers: { "content-type": "application/json", ...(init?.headers ?? {}) },
+    credentials: "include",
+    cache: "no-store"
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`API ${res.status} ${res.statusText}: ${body}`);
+  }
+  return (await res.json()) as T;
+}
+
+export const api = {
+  searchAssets: (q: string) =>
+    req<Asset[]>(`/api/v1/assets/search?q=${encodeURIComponent(q)}`),
+  getAsset: (id: string) => req<Asset>(`/api/v1/assets/${encodeURIComponent(id)}`),
+  getQuote: (id: string) => req<Quote>(`/api/v1/prices/${encodeURIComponent(id)}/quote`),
+  getBars: (id: string, interval = "1d", lookback = 365) =>
+    req<BarsResponse>(
+      `/api/v1/prices/${encodeURIComponent(id)}/bars?interval=${interval}&lookback_days=${lookback}`
+    ),
+  marketStatus: () => req<MarketStatus[]>(`/api/v1/markets/status`),
+  providersStatus: () => req<ProviderStatus[]>(`/api/v1/providers/status`),
+  listWatchlists: () => req<Watchlist[]>(`/api/v1/watchlists`),
+  createWatchlist: (name: string) =>
+    req<Watchlist>(`/api/v1/watchlists`, { method: "POST", body: JSON.stringify({ name }) }),
+  addWatchlistItem: (wlId: number, assetCanonicalId: string, note = "") =>
+    req(`/api/v1/watchlists/${wlId}/items`, {
+      method: "POST",
+      body: JSON.stringify({ asset_canonical_id: assetCanonicalId, note })
+    }),
+  removeWatchlistItem: (wlId: number, itemId: number) =>
+    req(`/api/v1/watchlists/${wlId}/items/${itemId}`, { method: "DELETE" })
+};
+
+export const runtime = cfg;

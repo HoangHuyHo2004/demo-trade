@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "demo-trade-worker"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+  "celery[redis]>=5.4",
+  "structlog>=24.1",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["worker*"]
