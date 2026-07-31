@@ -2,7 +2,7 @@
 
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { Card } from "@/components/Card";
 import { CompareChart, type CompareSeries } from "@/components/CompareChart";
@@ -13,6 +13,15 @@ const MAX_ASSETS = 5;
 const COLORS = ["#4f8cff", "#22c55e", "#ef4444", "#f59e0b", "#a855f7"];
 
 export default function ComparePage() {
+  // useSearchParams triggers CSR-bailout during prerender; wrap in Suspense.
+  return (
+    <Suspense fallback={<p className="text-sm text-slate-500">Loading…</p>}>
+      <ComparePageInner />
+    </Suspense>
+  );
+}
+
+function ComparePageInner() {
   const router = useRouter();
   const params = useSearchParams();
   const idsFromUrl = useMemo(() => {

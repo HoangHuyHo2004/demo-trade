@@ -2,7 +2,7 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { api } from "@/lib/api";
 import { Card } from "@/components/Card";
 import { ResearchResponseView } from "@/components/ResearchResponseView";
@@ -14,6 +14,15 @@ interface Turn {
 }
 
 export default function ResearchPage() {
+  // useSearchParams triggers CSR-bailout during prerender; wrap in Suspense.
+  return (
+    <Suspense fallback={<p className="text-sm text-slate-500">Loading…</p>}>
+      <ResearchPageInner />
+    </Suspense>
+  );
+}
+
+function ResearchPageInner() {
   const params = useSearchParams();
   const assetId = params.get("asset") ?? "";
   const [input, setInput] = useState(

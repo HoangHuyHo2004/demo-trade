@@ -45,7 +45,7 @@ export default function LabPage() {
           <span className="text-slate-500 font-normal text-base">{asset.data?.name}</span>
         </h1>
         <p className="text-xs text-slate-500 mt-1">
-          Inspect the model's factor contributions, adjust bounded parameters,
+          Inspect the model&apos;s factor contributions, adjust bounded parameters,
           and run a cost-aware walk-forward backtest. All calculations are
           deterministic and audited (see{" "}
           <code className="mono">AGENTS.md</code>).
@@ -129,7 +129,7 @@ export default function LabPage() {
             {backtest.isPending ? "Running…" : "Run backtest"}
           </button>
           <p className="text-xs text-slate-500">
-            Walk-forward evaluation using each bar's <code className="mono">available_at</code>{" "}
+            Walk-forward evaluation using each bar&apos;s <code className="mono">available_at</code>{" "}
             (no lookahead). Costs applied per side on entry and exit.
           </p>
         </div>
