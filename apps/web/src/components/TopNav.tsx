@@ -11,6 +11,7 @@ export function TopNav() {
           <Link href="/" className="hover:underline">Dashboard</Link>
           <Link href="/watchlist" className="hover:underline">Watchlist</Link>
           <Link href="/search" className="hover:underline">Search</Link>
+          <Link href="/compare" className="hover:underline">Compare</Link>
         </nav>
       </div>
     </header>

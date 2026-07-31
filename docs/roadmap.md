@@ -13,13 +13,22 @@ Ordered per the product spec §20.
 - Next.js dashboard, watchlist, asset detail (sparkline chart)
 - CI (lint + type + test + build), pytest suite for Phase 1 code
 
-## Phase 2 — Market data + charts
+## Phase 2 — Market data + charts ✅
 
-- Real adapters: Alpaca (US), SSI FastConnect (VN), Coinbase public (crypto)
-- Historical bars persisted, adjustments applied
-- Interactive TradingView Lightweight Charts, period comparison (1D…MAX)
-- Half-day / holiday calendars, market-holiday tests
-- Provider status + data-freshness banners driven by ingest jobs
+- Real adapters shipped:
+  - Coinbase public REST (no auth) — active by default
+  - Alpaca (US) — auto-selects when credentials present
+  - SSI FastConnect (VN) — credential-gated skeleton (auth flow deferred)
+- Historical bars persisted through `BarRepository` (DB-first, upserts,
+  audited via `bar_ingest_runs`)
+- Interactive Lightweight Charts on asset detail; period selector
+  1D / 1W / 1M / 3M / 6M / 1Y / 5Y / MAX; per-period return badges
+- Multi-asset compare page (up to 5), rebased-to-100 overlay, currency
+  mismatch warning
+- US + VN holidays for 2025–2027 in calendars; half-day sessions still
+  deferred
+- Data-freshness badge + provider-status panel in the UI
+- Celery `refresh_bars` beat job populates cache for tracked assets
 
 ## Phase 3 — Signal + backtest engines
 

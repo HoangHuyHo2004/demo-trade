@@ -74,8 +74,21 @@ async def test_bars_endpoint(session, client):
     assert r.status_code == 200
     body = r.json()
     assert body["interval"] == "1d"
-    assert body["source"] == "mock"
+    assert body["source"] == "mock"  # tests force mock-only
+    assert "from_cache" in body
+    assert body["from_cache"] is False  # first call → fresh fetch
+    assert body["last_bar_time"] is not None
+    assert body["last_ingest_time"] is not None
     assert len(body["bars"]) > 30
+
+    # Second call should be served from cache (repository upserted the
+    # bars on the first call).
+    r2 = await client.get(
+        "/api/v1/prices/CRYPTO:COINBASE:BTC-USD/bars",
+        params={"interval": "1d", "lookback_days": 60},
+    )
+    assert r2.status_code == 200
+    assert r2.json()["from_cache"] is True
 
 
 @pytest.mark.asyncio
@@ -112,4 +125,11 @@ async def test_providers_status(client):
     r = await client.get("/api/v1/providers/status")
     assert r.status_code == 200
     body = r.json()
-    assert any(p["slug"] == "mock" for p in body)
+    slugs = {p["slug"] for p in body}
+    assert "mock" in slugs
+    # In test env (USE_MOCK_PROVIDERS_ONLY=true) mock serves every market.
+    mock_row = next(p for p in body if p["slug"] == "mock")
+    assert set(mock_row["is_selected_for"]) >= {"US", "VN", "COINBASE"}
+    for p in body:
+        assert "markets" in p
+        assert "is_selected_for" in p

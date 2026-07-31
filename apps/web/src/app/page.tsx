@@ -4,11 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { Card } from "@/components/Card";
-import { fmtNumber, fmtTime, ageString } from "@/lib/format";
+import { ProviderPanel } from "@/components/ProviderPanel";
 
 export default function DashboardPage() {
   const markets = useQuery({ queryKey: ["markets"], queryFn: api.marketStatus });
-  const providers = useQuery({ queryKey: ["providers"], queryFn: api.providersStatus });
   const watchlists = useQuery({ queryKey: ["watchlists"], queryFn: api.listWatchlists });
 
   return (
@@ -22,14 +21,10 @@ export default function DashboardPage() {
           <ul className="grid gap-2">
             {markets.data?.map((m) => (
               <li key={m.calendar} className="flex items-center justify-between text-sm">
-                <span className="font-medium">{m.market} <span className="text-slate-500">({m.calendar})</span></span>
-                <span
-                  className={
-                    m.is_open
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : "text-slate-500"
-                  }
-                >
+                <span className="font-medium">
+                  {m.market} <span className="text-slate-500">({m.calendar})</span>
+                </span>
+                <span className={m.is_open ? "text-emerald-600 dark:text-emerald-400" : "text-slate-500"}>
                   {m.state}
                   {m.is_open ? " · closes " : " · opens "}
                   <span className="mono">
@@ -48,24 +43,17 @@ export default function DashboardPage() {
         </Card>
 
         <Card title="Data providers">
-          {providers.isPending && <p className="text-sm text-slate-500">Loading…</p>}
-          <ul className="grid gap-2 text-sm">
-            {providers.data?.map((p) => (
-              <li key={p.slug} className="flex items-center justify-between">
-                <span className="font-medium">{p.slug}</span>
-                <span className="text-slate-500">
-                  {p.status} · {p.message}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <ProviderPanel />
         </Card>
       </div>
 
       <Card
         title="Watchlist"
         actions={
-          <Link href="/watchlist" className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
+          <Link
+            href="/watchlist"
+            className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+          >
             Manage →
           </Link>
         }
@@ -96,8 +84,8 @@ export default function DashboardPage() {
       </Card>
 
       <p className="text-xs text-slate-500">
-        Phase 1 foundation. Signals, backtests, research chat, and portfolio arrive in later phases.
-        Every displayed price will always carry a timestamp, source, and market state.
+        Phase 2 wired. Coinbase spot data is fetched from the public exchange endpoint;
+        Alpaca and SSI FastConnect are auto-selected when credentials are configured.
       </p>
     </div>
   );

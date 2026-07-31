@@ -32,6 +32,9 @@ export interface BarsResponse {
   asset_id: string;
   interval: BarInterval;
   source: string;
+  from_cache: boolean;
+  last_bar_time: string | null;
+  last_ingest_time: string | null;
   bars: Bar[];
 }
 

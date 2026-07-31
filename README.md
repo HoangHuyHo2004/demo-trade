@@ -8,35 +8,47 @@ Supports US equities, Vietnamese equities (HOSE/HNX/UPCOM), and spot crypto.
 
 ---
 
-## Status: **Phase 1 — Foundation**
+## Status: **Phase 1 — Foundation ✅** · **Phase 2 — Market data + charts ✅**
 
-Implemented in this iteration:
+Phase 1 (foundation):
 
 - Monorepo layout (`apps/web`, `services/api`, `services/worker`, `packages/*`)
 - Docker Compose local stack (Postgres + Redis + API + Worker + Web)
 - Async FastAPI with structured logging, health/ready endpoints, versioned `/api/v1`
-- SQLAlchemy 2.0 models + Alembic migrations for the Phase 1 entity set
+- SQLAlchemy 2.0 models + Alembic migrations
 - **Canonical asset identity** (`{ASSET_TYPE}:{MARKET}:{EXCHANGE}:{SYMBOL}`) and
   ambiguity-safe symbol resolution
 - **Deterministic mock market-data provider** (US equity, VN equity, crypto,
   per-market benchmarks) — no external credentials required
 - Watchlist CRUD (demo user)
-- Market-status service with real market calendars (HOSE/HNX/UPCOM half-days deferred)
 - Next.js 15 (App Router) + Tailwind + TanStack Query
-- Dashboard, watchlist, asset detail (chart placeholder), i18n stubs (EN/VI)
-- Mock auth (dev-mode demo user cookie)
-- GitHub Actions CI (Python lint/type/test + web lint/type/build)
-- Pytest suite for asset-id parsing, mock provider determinism, and API smoke
+- Dashboard, watchlist, asset detail with sparkline, i18n stubs (EN/VI)
+- Mock auth, GitHub Actions CI, pytest suite
+
+Phase 2 (this iteration — market data + charts):
+
+- **Real Coinbase adapter** (public REST, no auth) — active out of the box
+- **Alpaca adapter** (US equities) — auto-selects when `ALPACA_API_KEY/SECRET` set
+- **SSI FastConnect adapter** (VN) — credential-gated skeleton, refuses without contract
+- Registry with credential-based selection + rich `/api/v1/providers/status`
+- **`BarRepository`** — DB-first bar reads with provider fallback, upserts on
+  `(asset, interval, bar_time, source)`, audited via new `bar_ingest_runs` table
+- Celery `refresh_bars` beat job for tracked assets
+- **Interactive Lightweight Charts** on asset detail
+- **Period selector** (1D · 1W · 1M · 3M · 6M · 1Y · 5Y · MAX) + per-period return badges
+- **`/compare`** — multi-asset overlay (up to 5), rebased-to-100, currency-mismatch warning
+- **Data-freshness badge** + provider-status panel on dashboard and asset detail
+- US + VN holidays for 2025–2027; half-day sessions still deferred
+- 29 pytest tests (added Coinbase mock-HTTP tests, bar-repository tests, calendar-holiday tests)
 
 **Not yet implemented (deferred to later phases per spec §20):**
 
-- Real provider adapters (Alpaca, SSI FastConnect, Coinbase) — interfaces exist,
-  concrete adapters are placeholders that raise `NotImplementedError`
 - Signal engine, backtester, signal laboratory (Phase 3)
 - AI research agent, filings/news retrieval, prompt-injection defenses (Phase 4)
 - Paper portfolio, VaR, stress tests (Phase 5)
 - Playwright E2E, full a11y sweep, production auth (Auth.js/OIDC)
 - pgvector, object storage
+- Half-day session calendars, SSI FastConnect OAuth flow, Alpaca WebSocket ingest
 
 ---
 

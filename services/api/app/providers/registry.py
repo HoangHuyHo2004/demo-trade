@@ -93,6 +93,13 @@ def get_registry() -> ProviderRegistry:
         "KRAKEN": mock, "BINANCE": mock,
     }
 
+    if settings.use_mock_providers_only:
+        log.info("provider_registry_forced_mock_only")
+        return ProviderRegistry(
+            market_data_by_market=by_market,
+            all_market_data=all_providers,
+        )
+
     # Coinbase is public — always selected (even in demo mode) unless
     # explicitly disabled, since it exercises the real-provider path
     # end-to-end at zero cost.

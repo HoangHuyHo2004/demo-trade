@@ -12,6 +12,8 @@ export interface MarketStatus {
 export interface ProviderStatus {
   slug: string;
   kind: string;
-  status: "ok" | "degraded" | "down" | "unknown";
+  status: "ok" | "degraded" | "down" | "unknown" | "missing_credentials";
   message: string;
+  markets: string[];
+  is_selected_for: string[];
 }

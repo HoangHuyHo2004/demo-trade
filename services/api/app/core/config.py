@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     # --- Provider configuration ---
     # When true, keep DEMO_MODE registry (mock only). When false, the
     # registry auto-selects real adapters where credentials are present.
+    # When true, the registry skips ALL real adapters and routes every
+    # market to the deterministic mock provider. Used by the test suite
+    # (and available as an escape hatch in production).
+    use_mock_providers_only: bool = False
     coinbase_api_url: str = "https://api.exchange.coinbase.com"
     alpaca_api_key: str = ""
     alpaca_api_secret: str = ""

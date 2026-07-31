@@ -12,7 +12,7 @@ back-filling gaps automatically.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 from sqlalchemy import and_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert

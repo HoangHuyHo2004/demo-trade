@@ -2,49 +2,66 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
+import { useMemo, useState } from "react";
+import Link from "next/link";
 import { api } from "@/lib/api";
 import { Card } from "@/components/Card";
-import { fmtNumber, fmtTime, ageString } from "@/lib/format";
-import { useMemo } from "react";
+import { FreshnessBadge } from "@/components/FreshnessBadge";
+import { PriceChart } from "@/components/PriceChart";
+import { fmtNumber, fmtTime } from "@/lib/format";
+import { PERIODS, periodByKey, periodReturn, type PeriodKey } from "@/lib/periods";
 
 export default function AssetPage() {
   const params = useParams<{ id: string }>();
   const id = decodeURIComponent(params.id);
 
+  const [period, setPeriod] = useState<PeriodKey>("1Y");
+  const p = periodByKey(period);
+
   const asset = useQuery({ queryKey: ["asset", id], queryFn: () => api.getAsset(id) });
   const quote = useQuery({ queryKey: ["quote", id], queryFn: () => api.getQuote(id) });
   const bars = useQuery({
-    queryKey: ["bars", id, "1d", 365],
-    queryFn: () => api.getBars(id, "1d", 365)
+    queryKey: ["bars", id, p.interval, p.lookbackDays],
+    queryFn: () => api.getBars(id, p.interval, p.lookbackDays)
   });
 
-  const sparklinePath = useMemo(() => {
-    const b = bars.data?.bars ?? [];
-    if (b.length < 2) return "";
-    const values = b.map((x) => Number(x.c));
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-    const range = max - min || 1;
-    const w = 600;
-    const h = 140;
-    const step = w / (values.length - 1);
-    return values
-      .map((v, i) => {
-        const x = i * step;
-        const y = h - ((v - min) / range) * h;
-        return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
-      })
-      .join(" ");
+  const returns = useMemo(() => {
+    const rows = PERIODS.map((pp) => ({ p: pp, value: null as number | null }));
+    if (!bars.data) return rows;
+    // For each period, compute return over the corresponding tail of the
+    // currently loaded series when the loaded lookback covers it. When it
+    // doesn't, we leave the cell blank rather than lie.
+    const closes = bars.data.bars.map((b) => Number(b.c));
+    const times = bars.data.bars.map((b) => new Date(b.t).getTime());
+    const nowMs = Date.now();
+    return rows.map((row) => {
+      if (closes.length < 2) return row;
+      const cutoff = nowMs - row.p.lookbackDays * 86_400_000;
+      const idx = times.findIndex((t) => t >= cutoff);
+      if (idx < 0 || idx >= closes.length - 1) return row;
+      const first = closes[idx];
+      const last = closes[closes.length - 1];
+      if (!first) return row;
+      return { p: row.p, value: (last - first) / first };
+    });
   }, [bars.data]);
 
   return (
     <div className="grid gap-4">
-      <div>
-        <p className="text-xs text-slate-500 mono">{id}</p>
-        <h1 className="text-xl font-semibold tracking-tight">
-          {asset.data?.display_symbol ?? "…"}{" "}
-          <span className="text-slate-500 font-normal text-base">{asset.data?.name}</span>
-        </h1>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <p className="text-xs text-slate-500 mono">{id}</p>
+          <h1 className="text-xl font-semibold tracking-tight">
+            {asset.data?.display_symbol ?? "…"}{" "}
+            <span className="text-slate-500 font-normal text-base">{asset.data?.name}</span>
+          </h1>
+        </div>
+        <Link
+          href={`/compare?ids=${encodeURIComponent(id)}`}
+          className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+        >
+          Compare with… →
+        </Link>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -56,22 +73,26 @@ export default function AssetPage() {
                 {fmtNumber(quote.data.price, 2)}{" "}
                 <span className="text-base text-slate-500">{quote.data.currency}</span>
               </p>
-              <p className="text-xs text-slate-500">
-                As of {fmtTime(quote.data.event_time)} ({ageString(quote.data.event_time)}) ·{" "}
-                source <span className="mono">{quote.data.source}</span> · market{" "}
-                <span
-                  className={
-                    quote.data.market_state === "OPEN"
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : "text-slate-500"
-                  }
-                >
-                  {quote.data.market_state}
+              <div className="flex items-center gap-2 flex-wrap text-xs text-slate-500">
+                <FreshnessBadge
+                  eventTime={quote.data.event_time}
+                  isStale={quote.data.is_stale}
+                  source={quote.data.source}
+                />
+                <span>
+                  Market{" "}
+                  <span
+                    className={
+                      quote.data.market_state === "OPEN"
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-slate-500"
+                    }
+                  >
+                    {quote.data.market_state}
+                  </span>
                 </span>
-                {quote.data.is_stale && (
-                  <span className="ml-2 text-amber-600 dark:text-amber-400">· stale</span>
-                )}
-              </p>
+                <span>· {fmtTime(quote.data.event_time)}</span>
+              </div>
             </div>
           )}
         </Card>
@@ -80,24 +101,74 @@ export default function AssetPage() {
           <p className="text-sm text-slate-500">
             Quantitative signal, confidence, risk class, factor contributions, and
             backtest summary will appear here once the signal engine is implemented.
-            The AI research agent (Phase 4) is <em>not</em> permitted to produce these
-            values — see <code className="mono">AGENTS.md</code>.
+            The AI research agent (Phase 4) is <em>not</em> permitted to produce
+            these values — see <code className="mono">AGENTS.md</code>.
           </p>
         </Card>
       </div>
 
-      <Card title="Chart (daily close, 1Y)">
+      <Card
+        title={`Chart · ${p.interval} · ${p.label}`}
+        actions={
+          <div className="flex gap-1 flex-wrap">
+            {PERIODS.map((pp) => (
+              <button
+                key={pp.key}
+                onClick={() => setPeriod(pp.key)}
+                className={`text-xs px-2 py-1 rounded border ${
+                  pp.key === period
+                    ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                    : "border-slate-200 dark:border-slate-700 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                }`}
+              >
+                {pp.label}
+              </button>
+            ))}
+          </div>
+        }
+      >
         {bars.isPending && <p className="text-sm text-slate-500">Loading…</p>}
-        {bars.data && (
+        {bars.data && bars.data.bars.length > 0 && (
           <>
-            <svg viewBox="0 0 600 140" className="w-full h-40" role="img" aria-label="Close price sparkline">
-              <path d={sparklinePath} fill="none" stroke="currentColor" strokeWidth="1.5" />
-            </svg>
-            <p className="text-xs text-slate-500 mt-2">
-              {bars.data.bars.length} bars · interval {bars.data.interval} · source{" "}
-              <span className="mono">{bars.data.source}</span>
-            </p>
+            <PriceChart bars={bars.data.bars} type="line" />
+            <div className="mt-3 flex items-center justify-between flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2">
+                {returns.map((r) => (
+                  <span
+                    key={r.p.key}
+                    className="text-xs px-2 py-1 rounded border border-slate-200 dark:border-slate-800"
+                  >
+                    <span className="text-slate-500">{r.p.label}</span>{" "}
+                    <span
+                      className={
+                        r.value == null
+                          ? "text-slate-400"
+                          : r.value >= 0
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-red-600 dark:text-red-400"
+                      }
+                    >
+                      {r.value == null ? "—" : `${(r.value * 100).toFixed(2)}%`}
+                    </span>
+                  </span>
+                ))}
+              </div>
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <span>{bars.data.bars.length} bars</span>
+                <span>·</span>
+                <span>source <span className="mono">{bars.data.source}</span></span>
+                <span>·</span>
+                <span>{bars.data.from_cache ? "from cache" : "fresh fetch"}</span>
+                <FreshnessBadge
+                  eventTime={bars.data.last_bar_time}
+                  ingestTime={bars.data.last_ingest_time}
+                />
+              </div>
+            </div>
           </>
+        )}
+        {bars.data && bars.data.bars.length === 0 && (
+          <p className="text-sm text-slate-500">No bars available for this window.</p>
         )}
       </Card>
     </div>

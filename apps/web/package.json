@@ -14,6 +14,7 @@
     "@demo-trade/config": "workspace:*",
     "@demo-trade/contracts": "workspace:*",
     "@tanstack/react-query": "^5.56.0",
+    "lightweight-charts": "^4.2.0",
     "next": "^15.0.0",
     "react": "^19.0.0-rc",
     "react-dom": "^19.0.0-rc"
