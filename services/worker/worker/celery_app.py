@@ -25,9 +25,13 @@ app.conf.update(
             "task": "worker.tasks.heartbeat",
             "schedule": 60.0,
         },
-        "refresh-quotes-every-15m": {
-            "task": "worker.tasks.refresh_quotes",
+        # Refresh daily bars for tracked assets every 15 minutes. The
+        # bar repository upserts on the (asset, interval, bar_time,
+        # source) unique key, so repeated runs are safe.
+        "refresh-bars-every-15m": {
+            "task": "worker.tasks.refresh_bars",
             "schedule": crontab(minute="*/15"),
+            "kwargs": {"interval": "1d", "lookback_days": 60},
         },
     },
 )

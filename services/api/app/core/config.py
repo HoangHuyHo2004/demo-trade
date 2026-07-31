@@ -28,6 +28,17 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     openai_api_key: str = ""
 
+    # --- Provider configuration ---
+    # When true, keep DEMO_MODE registry (mock only). When false, the
+    # registry auto-selects real adapters where credentials are present.
+    coinbase_api_url: str = "https://api.exchange.coinbase.com"
+    alpaca_api_key: str = ""
+    alpaca_api_secret: str = ""
+    alpaca_api_url: str = "https://data.alpaca.markets"
+    ssi_fc_consumer_id: str = ""
+    ssi_fc_consumer_secret: str = ""
+    ssi_fc_api_url: str = "https://fc-data.ssi.com.vn"
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.api_cors_origins.split(",") if o.strip()]

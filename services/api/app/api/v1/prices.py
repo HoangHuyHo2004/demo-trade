@@ -9,6 +9,7 @@ from app.deps import RegistryDep, SessionDep
 from app.domain.asset_id import AssetId
 from app.models.asset import Asset
 from app.schemas.common import BarOut, BarsOut, QuoteOut
+from app.services.bar_repository import BarRepository
 from app.services.market_status import status_for
 
 router = APIRouter()
@@ -61,14 +62,23 @@ async def get_bars(
     lookback_days: int = Query(365, ge=1, le=3650),
 ) -> BarsOut:
     asset = await _load_asset(session, asset_id)
-    aid = AssetId.parse(asset.canonical_id)
     end = datetime.now(UTC)
     start = end - timedelta(days=lookback_days)
     provider = registry.market_data_for(asset.market)
-    bars = await provider.get_bars(aid, interval=interval, start=start, end=end)
+    repo = BarRepository(session)
+    result = await repo.get_or_fetch(
+        asset, provider, interval=interval, start=start, end=end
+    )
+    last_bar = result.bars[-1] if result.bars else None
     return BarsOut(
         asset_id=asset.canonical_id,
         interval=interval,
-        source=provider.slug,
-        bars=[BarOut(t=b.bar_time, o=b.open, h=b.high, l=b.low, c=b.close, v=b.volume) for b in bars],
+        source=result.source,
+        from_cache=result.from_cache,
+        last_bar_time=last_bar.bar_time if last_bar else None,
+        last_ingest_time=last_bar.ingest_time if last_bar else None,
+        bars=[
+            BarOut(t=b.bar_time, o=b.open, h=b.high, l=b.low, c=b.close, v=b.volume)
+            for b in result.bars
+        ],
     )

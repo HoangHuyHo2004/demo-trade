@@ -1,7 +1,17 @@
-"""Worker tasks. Phase 1 is intentionally minimal."""
+"""Worker tasks.
+
+Phase 2: refresh daily bars for every asset that appears on any
+watchlist. The heavy work runs in the API service's DB via a thin
+per-task session; the worker sits on the same Redis broker and shares
+the API's SQLAlchemy models.
+"""
 from __future__ import annotations
 
+import asyncio
 import logging
+from datetime import UTC, datetime, timedelta
+
+from sqlalchemy import select
 
 from worker.celery_app import app
 
@@ -16,9 +26,48 @@ def heartbeat() -> str:
 
 @app.task(name="worker.tasks.refresh_quotes")
 def refresh_quotes() -> str:
-    """Phase 2 will refresh cached quotes from live providers.
+    """Kept for backwards compatibility; delegates to refresh_bars."""
+    return refresh_bars.run(interval="1d", lookback_days=60)
 
-    In Phase 1 we log a no-op so operators can see the schedule firing.
+
+@app.task(name="worker.tasks.refresh_bars")
+def refresh_bars(interval: str = "1d", lookback_days: int = 60) -> str:
+    """Refresh bars for every asset referenced by any watchlist item.
+
+    Runs each fetch through :class:`BarRepository`, so it upserts and
+    audits automatically.
     """
-    log.info("refresh_quotes: no-op in Phase 1 (mock provider is computed on-demand)")
-    return "noop"
+    return asyncio.run(_refresh_bars_async(interval, lookback_days))
+
+
+async def _refresh_bars_async(interval: str, lookback_days: int) -> str:
+    # Late imports: the worker image installs both packages, but tests
+    # for the API service should not require celery to be importable.
+    from app.db import SessionLocal
+    from app.models.asset import Asset
+    from app.models.watchlist import WatchlistItem
+    from app.providers.registry import get_registry
+    from app.services.bar_repository import BarRepository
+
+    reg = get_registry()
+    end = datetime.now(UTC)
+    start = end - timedelta(days=lookback_days)
+    processed = 0
+    errors = 0
+
+    async with SessionLocal() as session:
+        stmt = select(Asset).join(WatchlistItem, WatchlistItem.asset_id == Asset.id).distinct()
+        assets = list((await session.execute(stmt)).scalars().all())
+        for a in assets:
+            try:
+                repo = BarRepository(session)
+                provider = reg.market_data_for(a.market)
+                await repo.get_or_fetch(a, provider, interval=interval, start=start, end=end)
+                processed += 1
+            except Exception:  # noqa: BLE001
+                errors += 1
+                log.exception("refresh_bars failed for %s", a.canonical_id)
+
+    msg = f"refresh_bars interval={interval} lookback={lookback_days}d processed={processed} errors={errors}"
+    log.info(msg)
+    return msg

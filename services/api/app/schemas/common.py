@@ -68,4 +68,7 @@ class BarsOut(BaseModel):
     asset_id: str
     interval: str
     source: str
+    from_cache: bool
+    last_bar_time: datetime | None = None
+    last_ingest_time: datetime | None = None
     bars: list[BarOut]
