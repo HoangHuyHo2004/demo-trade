@@ -18,3 +18,4 @@ class User(Base, TimestampMixin):
     timezone: Mapped[str] = mapped_column(String(64), nullable=False, default="UTC")
     oauth_provider: Mapped[str | None] = mapped_column(String(32), nullable=True)
     oauth_account_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    is_admin: Mapped[bool] = mapped_column(nullable=False, default=False)

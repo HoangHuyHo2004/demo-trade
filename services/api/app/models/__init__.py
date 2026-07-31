@@ -4,6 +4,17 @@ from app.models.asset import Asset, AssetAlias  # noqa: F401
 from app.models.exchange import Exchange  # noqa: F401
 from app.models.ingest import BarIngestRun  # noqa: F401
 from app.models.job import Job, JobKind, JobStatus  # noqa: F401
+from app.models.ml import (  # noqa: F401
+    MLDataset,
+    MLFamily,
+    MLModel,
+    MLModelState,
+    MLPrediction,
+    MLPredictionOutcome,
+    MLTask,
+    MLTrainingRun,
+    MLTrainingStatus,
+)
 from app.models.market_data import PriceBar, Quote  # noqa: F401
 from app.models.portfolio import (  # noqa: F401
     PaperTransaction,

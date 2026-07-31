@@ -110,3 +110,13 @@ async def get_current_user(
 
 
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
+
+
+async def get_current_admin(user: CurrentUserDep) -> User:
+    """Guard for admin-only endpoints (ML train/promote/disable, etc.)."""
+    if not getattr(user, "is_admin", False):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="admin only")
+    return user
+
+
+CurrentAdminDep = Annotated[User, Depends(get_current_admin)]

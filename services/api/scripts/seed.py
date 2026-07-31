@@ -140,6 +140,12 @@ async def main() -> None:
             session.add(user)
             await session.commit()
             await session.refresh(user)
+        # In demo mode the seeded user is also the admin so /ml/train etc.
+        # is exercisable end-to-end. In production DEMO_MODE=false + a real
+        # admin promotion process would replace this.
+        if settings.demo_mode and not user.is_admin:
+            user.is_admin = True
+            await session.commit()
 
         # watchlist
         result = await session.execute(
