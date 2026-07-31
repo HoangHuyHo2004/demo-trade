@@ -31,10 +31,19 @@ export interface BacktestSummary {
   costs_included: boolean;
 }
 
+export type DataFreshness = "CURRENT" | "STALE" | "UNAVAILABLE";
+
 export interface Signal {
   asset_id: string;
   as_of: string; // ISO
   data_fresh_seconds: number;
+  // Spec §9 canonical fields (Phase 5.2)
+  model_version: string;
+  data_source: string;
+  data_freshness: DataFreshness;
+  expected_holding_period: string;
+  warnings: string[];
+  // Original fields (kept as aliases so nothing breaks)
   horizon: "1D" | "5D" | "20D";
   classification: SignalClassification;
   score: number; // -100..100
@@ -51,7 +60,7 @@ export interface Signal {
   data_quality_score: number; // 0..1
   regime: string;
   backtest?: BacktestSummary | null;
-  strategy_version: string;
+  strategy_version: string;   // alias of model_version
   data_version: string;
   generated_at: string;
   disclaimer: string;
