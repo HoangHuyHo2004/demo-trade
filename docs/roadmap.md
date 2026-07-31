@@ -110,10 +110,47 @@ Deferred to Phase 4.1:
   scenarios
 - Docs: `docs/deployment.md`, `docs/operations-runbook.md`
 
-Deferred to Phase 5.1:
-- Production auth (Auth.js/OIDC) — demo cookie remains, gated by
-  `DEMO_MODE`; `docs/deployment.md` details what's required
-- Playwright critical-flow tests, WCAG sweep
-- OpenTelemetry + Prometheus metrics endpoint
+## Phase 5.1 — Production auth ✅
+
+- Auth.js v5 with GitHub OIDC + demo credentials provider
+- Shared HS256 JWT session (PyJWT on the API side)
+- `users.oauth_provider` + `oauth_account_id` (migration 0006)
+- `/api/v1/auth/{me,demo-login,logout}`, middleware, `/signin` page
+- 99 pytest tests
+
+## Phase 5.2 — Spec gap-fill ✅
+
+- Per-market signal weights (US / VN / crypto) — spec §8 no longer
+  uses one weight table for every market
+- Signal payload additive fields (spec §9): `data_source`,
+  `data_freshness`, `model_version`, `expected_holding_period`,
+  combined `warnings`. Historical fields remain as aliases.
+- API surface aliases (spec §10): `/api/v1/assets/{id}/quote|bars|signal`
+  delegate to the existing handlers; `/watchlists/{id}/assets` alias.
+- `POST /api/v1/assets/compare` — backend counterpart of the web
+  compare page.
+- Async job pattern (spec §14): jobs table, `POST /backtests` returns
+  202 + `{job_id}`, `GET /jobs/{id}` polls; Celery task runs the same
+  inline runner as the sync path. `USE_SYNC_JOBS=true` runs inline
+  (default for tests + demo installs without Redis).
+- `user_settings` + `alerts` entities (spec §16). Settings API +
+  `/settings` web page.
+- Playwright critical-flow E2E (`pnpm --filter web e2e` against a
+  running compose stack).
+- Docs: `docs/assumptions.md`, `docs/local-development.md`,
+  `docs/api.md`, `docs/security.md`, `docs/ai-agent.md`.
+- 109 pytest tests; 8 migrations apply from empty.
+
+## Backlog (post-MVP)
+
+- pgvector RAG for SEC filings + VN disclosures + news (Phase 4.1)
+- Offline agent-evaluator sampling turns for signal-summary consistency
+- Anthropic streaming responses in the UI
+- Walk-forward parameter search with locked out-of-sample verification
+- Empirically-calibrated confidence table for `ensemble-v1`
+- OpenTelemetry traces + Prometheus metrics endpoint
 - Runtime-configurable rate-limit rules
 - Tax-lot cost accounting (FIFO/LIFO/specific-lot)
+- Half-day calendars + `exchange_calendars` integration
+- WCAG axe scan in CI
+- Full alerts UI (scheduler evaluates the table today; no user surface yet)

@@ -8,7 +8,7 @@ Supports US equities, Vietnamese equities (HOSE/HNX/UPCOM), and spot crypto.
 
 ---
 
-## Status: **Phase 1 ✅** · **Phase 2 ✅** · **Phase 3 ✅** · **Phase 4 ✅** · **Phase 5 ✅** · **Phase 5.1 — Production auth ✅**
+## Status: **Phase 1 ✅** · **Phase 2 ✅** · **Phase 3 ✅** · **Phase 4 ✅** · **Phase 5 ✅** · **Phase 5.1 ✅** · **Phase 5.2 — Spec gap-fill ✅**
 
 Phase 1 (foundation):
 
@@ -137,6 +137,33 @@ Phase 5.1 (this iteration — production auth):
 - 99 pytest tests total (added 10 auth tests: JWT roundtrip, wrong
   secret, expired, missing exp, too-far-future TTL, /me demo-off,
   demo-login flow, Bearer header, invalid cookie 401, logout clears)
+
+Phase 5.2 (this iteration — spec gap-fill):
+
+- **Per-market signal weights** (US / VN / crypto profiles) —
+  spec §8 no longer uses one weight table for every market
+- **Signal payload additive fields** (spec §9): `data_source`,
+  `data_freshness`, `model_version`, `expected_holding_period`,
+  combined `warnings`. Historical field names remain as aliases so
+  the current UI keeps rendering.
+- **API surface aliases** (spec §10):
+  `/api/v1/assets/{id}/quote|bars|signal` delegate to the existing
+  handlers; `/watchlists/{id}/assets` alias.
+- **`POST /api/v1/assets/compare`** — backend counterpart of the web
+  compare page (up to 5 assets, aligned closes rebased to 100).
+- **Async job pattern** (spec §14): `jobs` table, `POST /backtests`
+  returns 202 + `{job_id}`, `GET /jobs/{id}` polls. Celery task runs
+  the same inline runner as the sync path. `USE_SYNC_JOBS=true`
+  (default in tests + Redis-less demo installs) runs the job inline.
+- **`user_settings` + `alerts` entities** (spec §16). Settings API
+  + `/settings` web page (language, currency, timezone, default
+  signal horizon, risk display, theme, email notifications). Alerts
+  table present for the scheduler; no UI yet.
+- **Playwright** critical-flow E2E (`pnpm --filter web e2e`).
+- New docs: `docs/assumptions.md`, `docs/local-development.md`,
+  `docs/api.md`, `docs/security.md`, `docs/ai-agent.md`.
+- **109 pytest tests total** (added 10 new: jobs lifecycle + inline
+  runner + endpoint round-trip + settings CRUD).
 
 **Not yet implemented (Phase 4.1 / Phase 5.1 backlog):**
 
