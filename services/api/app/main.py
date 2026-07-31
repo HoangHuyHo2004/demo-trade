@@ -9,7 +9,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
-from app.api.v1 import assets, backtests, markets, prices, providers, signals, watchlists
+from app.api.v1 import (
+    agent,
+    assets,
+    backtests,
+    markets,
+    prices,
+    providers,
+    research,
+    signals,
+    watchlists,
+)
 from app.core.config import get_settings
 from app.core.logging import configure_logging, get_logger
 from app.db import engine
@@ -87,3 +97,5 @@ app.include_router(watchlists.router, prefix="/api/v1/watchlists", tags=["watchl
 app.include_router(providers.router, prefix="/api/v1/providers", tags=["providers"])
 app.include_router(signals.router, prefix="/api/v1/signals", tags=["signals"])
 app.include_router(backtests.router, prefix="/api/v1/backtests", tags=["backtests"])
+app.include_router(agent.router, prefix="/api/v1/agent", tags=["agent"])
+app.include_router(research.router, prefix="/api/v1/research", tags=["research"])

@@ -65,6 +65,12 @@ export default function AssetPage() {
             Signal lab →
           </Link>
           <Link
+            href={`/research?asset=${encodeURIComponent(id)}`}
+            className="text-blue-600 dark:text-blue-400 hover:underline"
+          >
+            Research chat →
+          </Link>
+          <Link
             href={`/compare?ids=${encodeURIComponent(id)}`}
             className="text-blue-600 dark:text-blue-400 hover:underline"
           >

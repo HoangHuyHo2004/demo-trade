@@ -8,7 +8,7 @@ Supports US equities, Vietnamese equities (HOSE/HNX/UPCOM), and spot crypto.
 
 ---
 
-## Status: **Phase 1 ✅** · **Phase 2 ✅** · **Phase 3 — Signal + backtest engines ✅**
+## Status: **Phase 1 ✅** · **Phase 2 ✅** · **Phase 3 ✅** · **Phase 4 — AI research agent ✅**
 
 Phase 1 (foundation):
 
@@ -62,9 +62,36 @@ Phase 3 (this iteration — signal + backtest engines):
   `model-risk-management.md`
 - 56 pytest tests total (indicators, engine, backtester, API smoke)
 
+Phase 4 (this iteration — AI research agent):
+
+- Pluggable LLM abstraction — `MockLLMProvider` (deterministic; demo & CI
+  default) + `AnthropicProvider` (real Claude Sonnet 5; credential-gated)
+- Typed tool allowlist with strict Pydantic schemas (`extra="forbid"`):
+  resolve, market status, quote, historical bars, calculated indicators,
+  signal, backtest, compare
+- Search-tool skeletons (SEC / VN disclosures / IR announcements / crypto
+  project posts / curated news) — return `status="not_available"` so the
+  agent abstains honestly rather than fabricating a citation
+- Orchestrator with per-turn budgets (max tool calls / tokens / wall-clock /
+  cost), delimited `<untrusted_source>` wrapping of every tool result,
+  full audit trail (`agent_runs`, `tool_calls`, `audit_logs`, `sources`)
+- Structured `ResearchResponse` separating facts / interpretation /
+  assumptions / unknowns with a citations panel; abstains cleanly when
+  data missing or LLM output isn't valid JSON
+- Signal-engine boundary: agent can request a signal but never invent
+  one — enforced in code + asserted by tests
+- API: `POST /agent/chat`, `GET /agent/runs/{id}`, `GET /research/{id}`
+- Web: `/research` chat page + `ResearchResponseView` component + link
+  from asset detail
+- `docs/agent-security.md` — threat model, allowlist, defenses, budgets,
+  audit, residual risks
+- 73 pytest tests total (added 17 agent tests covering schema validation,
+  injection resistance, budget enforcement, audit-trail redaction,
+  signal-engine boundary)
+
 **Not yet implemented (deferred to later phases per spec §20):**
 
-- AI research agent, filings/news retrieval, prompt-injection defenses (Phase 4)
+- SEC/VN filings retrieval + `pgvector` RAG (Phase 4.1)
 - Paper portfolio, VaR, stress tests (Phase 5)
 - Playwright E2E, full a11y sweep, production auth (Auth.js/OIDC)
 - pgvector, object storage

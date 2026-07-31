@@ -1,5 +1,6 @@
 import { readRuntimeConfig } from "@demo-trade/config";
 import type {
+  AgentChatResponse,
   Asset,
   BacktestResult,
   BarsResponse,
@@ -69,7 +70,16 @@ export const api = {
       method: "POST",
       body: JSON.stringify(body)
     }),
-  getBacktest: (id: number) => req<BacktestResult>(`/api/v1/backtests/${id}`)
+  getBacktest: (id: number) => req<BacktestResult>(`/api/v1/backtests/${id}`),
+  agentChat: (body: {
+    prompt: string;
+    asset_canonical_id?: string | null;
+    max_tool_calls?: number;
+  }) =>
+    req<AgentChatResponse>(`/api/v1/agent/chat`, {
+      method: "POST",
+      body: JSON.stringify(body)
+    })
 };
 
 export const runtime = cfg;

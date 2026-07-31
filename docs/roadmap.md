@@ -61,14 +61,34 @@ Deferred to a Phase 3.1 backlog:
 - Point-in-time universe membership for VN delistings
 - Empirically-calibrated confidence table
 
-## Phase 4 — AI research agent
+## Phase 4 — AI research agent ✅
 
-- Single research agent with allow-listed typed tools (Claude/Anthropic)
-- Source ingestion + structured citations
-- Prompt-injection defense (delimited untrusted content, URL allowlist,
-  budgets, per-turn token/cost/timeout caps)
-- Research chat UI with tool activity, citations, and clear fact vs
-  interpretation separation
+- Pluggable LLM provider abstraction: `MockLLMProvider` (deterministic,
+  demo/CI default) + `AnthropicProvider` (real Claude, credential-gated)
+- Typed tool allowlist with `extra="forbid"` Pydantic schemas: resolve,
+  market status, quote, historical bars, calculated indicators, signal,
+  backtest, compare
+- Search-tool skeletons (SEC / VN disclosures / IR announcements / crypto
+  project posts / curated news) — always return `not_available` so the
+  agent abstains honestly
+- Orchestrator with delimited `<untrusted_source>` wrapping, per-turn
+  budgets (tool calls / tokens / wall-clock / cost), redacted audit trail
+  (`agent_runs`, `tool_calls`, `audit_logs`, `sources` tables)
+- Structured `ResearchResponse` with facts vs interpretation vs
+  assumptions vs unknowns, plus citations panel
+- Signal-engine boundary: agent may request a signal but cannot invent
+  scores — enforced by mock LLM and asserted by tests
+- API: `POST /agent/chat`, `GET /agent/runs/{id}`, `GET /research/{id}`
+- Web: `/research` chat page + `ResearchResponseView` + link from asset
+  detail
+- Doc: `docs/agent-security.md`
+
+Deferred to Phase 4.1:
+- Real SEC EDGAR / VN disclosure ingest + `sources`/`document_chunks` RAG
+  with `pgvector`
+- Offline agent-evaluator that samples turns and audits signal-summary
+  consistency
+- Anthropic streaming responses in the UI
 
 ## Phase 5 — Paper portfolio + hardening
 

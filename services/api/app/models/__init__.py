@@ -1,4 +1,5 @@
 """SQLAlchemy models. Importing this module registers all mappers."""
+from app.models.agent import AgentRun, AuditLog, Source, ToolCall  # noqa: F401
 from app.models.asset import Asset, AssetAlias  # noqa: F401
 from app.models.exchange import Exchange  # noqa: F401
 from app.models.ingest import BarIngestRun  # noqa: F401
