@@ -8,7 +8,7 @@ Supports US equities, Vietnamese equities (HOSE/HNX/UPCOM), and spot crypto.
 
 ---
 
-## Status: **Phase 1 ✅** · **Phase 2 ✅** · **Phase 3 ✅** · **Phase 4 — AI research agent ✅**
+## Status: **Phase 1 ✅** · **Phase 2 ✅** · **Phase 3 ✅** · **Phase 4 ✅** · **Phase 5 — Paper portfolio + hardening ✅**
 
 Phase 1 (foundation):
 
@@ -89,9 +89,41 @@ Phase 4 (this iteration — AI research agent):
   injection resistance, budget enforcement, audit-trail redaction,
   signal-engine boundary)
 
-**Not yet implemented (deferred to later phases per spec §20):**
+Phase 5 (this iteration — paper portfolio + production hardening):
+
+- **Paper portfolio** with manual transactions (BUY/SELL/DEPOSIT/WITHDRAW/
+  DIVIDEND/FEE); WAC cost basis; realized + unrealized P&L; per-currency
+  cash + base-currency valuation via FX service
+- **FX service** — dated fixed-rate table for demo (USD/VND/EUR); same
+  interface flips into a live provider later without touching business code
+- **Risk analytics** — allocation by asset & market, HHI concentration,
+  historical vol + max drawdown, historical VaR 95%/99%, correlation
+  matrix, stress scenarios (−5/−10/−20/−30% risk-asset shock)
+- **Security headers middleware** — CSP, X-Frame-Options, Referrer-Policy,
+  Permissions-Policy, cross-origin isolation, HSTS in production
+- **Request-ID middleware** — binds into structured-log context; echoes
+  `X-Request-Id`
+- **Rate limiter** — Redis-backed with in-memory fallback; per-rule
+  buckets; auto-disables Redis after first failure so demo installs
+  don't hang
+- **Audit-log rows** on portfolio mutations (create, add transaction)
+- **Web `/portfolio` page** — portfolio picker, overview stats, positions
+  table with per-position P&L, transaction form, risk widget with
+  allocation bars and stress scenarios
+- **`docs/deployment.md`** + **`docs/operations-runbook.md`**
+- 89 pytest tests total (added 16 tests covering FX conversion, WAC
+  math, cash flow accounting, valuation end-to-end, security headers,
+  request-ID, in-memory rate limiter, end-to-end rate-limit trip)
+
+**Not yet implemented (Phase 4.1 / Phase 5.1 backlog):**
 
 - SEC/VN filings retrieval + `pgvector` RAG (Phase 4.1)
+- Production auth (Auth.js / OIDC) — the demo cookie remains, gated by
+  `DEMO_MODE`; see `docs/deployment.md`
+- Playwright critical-flow tests + WCAG sweep
+- OpenTelemetry traces + Prometheus metrics endpoint
+- Runtime-configurable rate-limit rules
+- Tax-lot cost accounting (FIFO/LIFO/specific-lot)
 - Paper portfolio, VaR, stress tests (Phase 5)
 - Playwright E2E, full a11y sweep, production auth (Auth.js/OIDC)
 - pgvector, object storage

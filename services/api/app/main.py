@@ -14,6 +14,7 @@ from app.api.v1 import (
     assets,
     backtests,
     markets,
+    portfolios,
     prices,
     providers,
     research,
@@ -22,6 +23,11 @@ from app.api.v1 import (
 )
 from app.core.config import get_settings
 from app.core.logging import configure_logging, get_logger
+from app.core.middleware import (
+    RateLimitMiddleware,
+    RequestIdMiddleware,
+    SecurityHeadersMiddleware,
+)
 from app.db import engine
 
 settings = get_settings()
@@ -51,6 +57,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Order: outermost first. Request ID must wrap security headers so it
+# stamps every response, including 4xx from the limiter.
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RateLimitMiddleware)
+app.add_middleware(RequestIdMiddleware)
 
 
 @app.middleware("http")
@@ -99,3 +110,4 @@ app.include_router(signals.router, prefix="/api/v1/signals", tags=["signals"])
 app.include_router(backtests.router, prefix="/api/v1/backtests", tags=["backtests"])
 app.include_router(agent.router, prefix="/api/v1/agent", tags=["agent"])
 app.include_router(research.router, prefix="/api/v1/research", tags=["research"])
+app.include_router(portfolios.router, prefix="/api/v1/portfolios", tags=["portfolios"])

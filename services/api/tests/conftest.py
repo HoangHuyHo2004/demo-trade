@@ -8,6 +8,8 @@ os.environ["ALEMBIC_DATABASE_URL"] = "sqlite:///:memory:"
 os.environ["DEMO_MODE"] = "true"
 os.environ["API_SECRET_KEY"] = "test-secret-key-longer-than-thirty-two-chars-abc"
 os.environ["USE_MOCK_PROVIDERS_ONLY"] = "true"
+# Force in-memory rate limiter (no Redis reachable in tests)
+os.environ["REDIS_URL"] = ""
 
 import asyncio  # noqa: E402
 from collections.abc import AsyncIterator  # noqa: E402

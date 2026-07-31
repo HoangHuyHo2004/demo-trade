@@ -90,11 +90,30 @@ Deferred to Phase 4.1:
   consistency
 - Anthropic streaming responses in the UI
 
-## Phase 5 — Paper portfolio + hardening
+## Phase 5 — Paper portfolio + hardening ✅
 
-- Manual paper transactions, positions, P&L, allocations, correlations
-- Portfolio VaR + stress scenarios (informational)
-- Real auth (Auth.js / OIDC), CSRF, rate limiting, security headers
-- Observability, structured audit logs, WCAG sweep
-- Playwright critical-flow tests
-- Deployment (`docs/deployment.md`), runbook (`docs/operations-runbook.md`)
+- Paper portfolios with manual transactions (BUY/SELL/DEPOSIT/WITHDRAW/
+  DIVIDEND/FEE); WAC cost basis; realized + unrealized P&L
+- FX conversion service (dated fixed-rate table for demo mode)
+- Multi-currency cash + base-currency valuation
+- Portfolio risk analytics: allocation by asset/market, HHI concentration,
+  historical vol + MDD, historical VaR 95%/99%, correlation matrix,
+  stress scenarios (−5/−10/−20/−30% risk-asset shock)
+- Security headers middleware (CSP, X-Frame-Options, Referrer-Policy,
+  Permissions-Policy, HSTS in production)
+- Request-ID middleware — binds into structured-log context + echoes
+  X-Request-Id header
+- Rate limiter — Redis-backed with in-memory fallback; per-rule buckets
+- Audit-log rows on portfolio mutations
+- Web `/portfolio` page: overview, positions table with per-position P&L,
+  transaction form, risk breakdown with allocation bars and stress
+  scenarios
+- Docs: `docs/deployment.md`, `docs/operations-runbook.md`
+
+Deferred to Phase 5.1:
+- Production auth (Auth.js/OIDC) — demo cookie remains, gated by
+  `DEMO_MODE`; `docs/deployment.md` details what's required
+- Playwright critical-flow tests, WCAG sweep
+- OpenTelemetry + Prometheus metrics endpoint
+- Runtime-configurable rate-limit rules
+- Tax-lot cost accounting (FIFO/LIFO/specific-lot)

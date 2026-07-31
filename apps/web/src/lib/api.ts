@@ -5,6 +5,9 @@ import type {
   BacktestResult,
   BarsResponse,
   MarketStatus,
+  PortfolioDetail,
+  PortfolioRisk,
+  PortfolioSummary,
   ProviderStatus,
   Quote,
   Signal,
@@ -79,7 +82,32 @@ export const api = {
     req<AgentChatResponse>(`/api/v1/agent/chat`, {
       method: "POST",
       body: JSON.stringify(body)
-    })
+    }),
+  listPortfolios: () => req<PortfolioSummary[]>(`/api/v1/portfolios`),
+  createPortfolio: (name: string, base_currency = "USD") =>
+    req<PortfolioSummary>(`/api/v1/portfolios`, {
+      method: "POST",
+      body: JSON.stringify({ name, base_currency })
+    }),
+  getPortfolio: (id: number) => req<PortfolioDetail>(`/api/v1/portfolios/${id}`),
+  addTransaction: (id: number, body: {
+    kind: string;
+    asset_canonical_id?: string | null;
+    quantity: string;
+    price?: string;
+    currency: string;
+    fee?: string;
+    executed_at?: string | null;
+    note?: string;
+  }) =>
+    req(`/api/v1/portfolios/${id}/transactions`, {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+  getPortfolioRisk: (id: number, lookback_days = 180) =>
+    req<PortfolioRisk>(
+      `/api/v1/portfolios/${id}/risk?lookback_days=${lookback_days}`
+    )
 };
 
 export const runtime = cfg;
