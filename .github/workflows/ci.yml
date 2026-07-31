@@ -41,12 +41,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # pnpm must be set up BEFORE setup-node so the node cache can point
+      # at pnpm-lock. Version is inferred from package.json's `packageManager`
+      # field — passing `version:` here would conflict with it.
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
+          node-version: "22"
       - name: Install
         run: pnpm install --no-frozen-lockfile
       - name: Typecheck
