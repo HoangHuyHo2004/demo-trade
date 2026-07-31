@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { auth, signIn } from "@/auth";
+import { cookies } from "next/headers";
+import { DemoLoginButton } from "@/components/DemoLoginButton";
 
 export default async function SignInPage({
   searchParams
@@ -8,13 +9,13 @@ export default async function SignInPage({
 }) {
   const params = await searchParams;
   const callbackUrl = params?.callbackUrl || "/";
-  const session = await auth();
-  if (session?.user) {
+  const cookieName = process.env.AUTH_COOKIE_NAME || "demo-trade.session";
+  const store = await cookies();
+  if (store.get(cookieName)?.value) {
     redirect(callbackUrl);
   }
 
-  const demoEnabled =
-    (process.env.DEMO_MODE || "").toLowerCase() === "true";
+  const demoEnabled = (process.env.DEMO_MODE || "").toLowerCase() === "true";
   const githubEnabled = Boolean(
     process.env.AUTH_GITHUB_ID && process.env.AUTH_GITHUB_SECRET
   );
@@ -30,12 +31,7 @@ export default async function SignInPage({
 
       <div className="grid gap-3">
         {githubEnabled && (
-          <form
-            action={async () => {
-              "use server";
-              await signIn("github", { redirectTo: callbackUrl });
-            }}
-          >
+          <form action="/api/auth/signin/github" method="POST">
             <button
               type="submit"
               className="w-full text-sm px-4 py-2 rounded border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
@@ -45,25 +41,7 @@ export default async function SignInPage({
           </form>
         )}
 
-        {demoEnabled && (
-          <form
-            action={async () => {
-              "use server";
-              await signIn("demo", { redirectTo: callbackUrl });
-            }}
-          >
-            <button
-              type="submit"
-              className="w-full text-sm px-4 py-2 rounded border border-blue-500 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950"
-            >
-              Continue as demo user
-            </button>
-            <p className="text-[10px] text-slate-500 mt-1">
-              Demo login is only available when the API is running with
-              DEMO_MODE=true.
-            </p>
-          </form>
-        )}
+        {demoEnabled && <DemoLoginButton callbackUrl={callbackUrl} />}
 
         {!githubEnabled && !demoEnabled && (
           <p className="text-sm text-amber-600 dark:text-amber-400">
