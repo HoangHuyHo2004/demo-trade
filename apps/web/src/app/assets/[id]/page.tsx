@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { Card } from "@/components/Card";
 import { FreshnessBadge } from "@/components/FreshnessBadge";
 import { PriceChart } from "@/components/PriceChart";
+import { SignalCard } from "@/components/SignalCard";
 import { fmtNumber, fmtTime } from "@/lib/format";
 import { PERIODS, periodByKey, periodReturn, type PeriodKey } from "@/lib/periods";
 
@@ -56,12 +57,20 @@ export default function AssetPage() {
             <span className="text-slate-500 font-normal text-base">{asset.data?.name}</span>
           </h1>
         </div>
-        <Link
-          href={`/compare?ids=${encodeURIComponent(id)}`}
-          className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-        >
-          Compare with… →
-        </Link>
+        <div className="flex gap-3 text-xs">
+          <Link
+            href={`/lab/${encodeURIComponent(id)}`}
+            className="text-blue-600 dark:text-blue-400 hover:underline"
+          >
+            Signal lab →
+          </Link>
+          <Link
+            href={`/compare?ids=${encodeURIComponent(id)}`}
+            className="text-blue-600 dark:text-blue-400 hover:underline"
+          >
+            Compare with… →
+          </Link>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -97,13 +106,18 @@ export default function AssetPage() {
           )}
         </Card>
 
-        <Card title="Signal (Phase 3)">
-          <p className="text-sm text-slate-500">
-            Quantitative signal, confidence, risk class, factor contributions, and
-            backtest summary will appear here once the signal engine is implemented.
-            The AI research agent (Phase 4) is <em>not</em> permitted to produce
-            these values — see <code className="mono">AGENTS.md</code>.
-          </p>
+        <Card
+          title="Signal"
+          actions={
+            <Link
+              href={`/lab/${encodeURIComponent(id)}`}
+              className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              Open lab →
+            </Link>
+          }
+        >
+          <SignalCard assetId={id} horizon="5D" />
         </Card>
       </div>
 

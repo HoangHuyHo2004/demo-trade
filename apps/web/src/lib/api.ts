@@ -1,10 +1,12 @@
 import { readRuntimeConfig } from "@demo-trade/config";
 import type {
   Asset,
+  BacktestResult,
   BarsResponse,
   MarketStatus,
   ProviderStatus,
   Quote,
+  Signal,
   Watchlist
 } from "@demo-trade/contracts";
 
@@ -47,7 +49,27 @@ export const api = {
       body: JSON.stringify({ asset_canonical_id: assetCanonicalId, note })
     }),
   removeWatchlistItem: (wlId: number, itemId: number) =>
-    req(`/api/v1/watchlists/${wlId}/items/${itemId}`, { method: "DELETE" })
+    req(`/api/v1/watchlists/${wlId}/items/${itemId}`, { method: "DELETE" }),
+  getSignal: (id: string, horizon: "1D" | "5D" | "20D" = "5D") =>
+    req<Signal>(
+      `/api/v1/signals/${encodeURIComponent(id)}?horizon=${horizon}`
+    ),
+  runBacktest: (body: {
+    asset_canonical_id: string;
+    interval?: string;
+    horizon: "1D" | "5D" | "20D";
+    entry_threshold?: number;
+    exit_threshold?: number;
+    cost_bps?: number | null;
+    slippage_bps?: number | null;
+    start?: string | null;
+    end?: string | null;
+  }) =>
+    req<BacktestResult>(`/api/v1/backtests`, {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+  getBacktest: (id: number) => req<BacktestResult>(`/api/v1/backtests/${id}`)
 };
 
 export const runtime = cfg;

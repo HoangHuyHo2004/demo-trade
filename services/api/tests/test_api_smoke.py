@@ -121,6 +121,49 @@ async def test_watchlist_flow(session, client):
 
 
 @pytest.mark.asyncio
+async def test_signals_and_backtest_endpoints(session, client):
+    # seed asset + benchmark
+    session.add(Asset(
+        canonical_id="EQUITY:US:NASDAQ:AAPL",
+        asset_type="EQUITY", market="US", exchange_code="NASDAQ",
+        symbol="AAPL", display_symbol="AAPL", name="Apple",
+        quote_currency="USD", market_timezone="America/New_York", calendar="XNYS",
+    ))
+    session.add(Asset(
+        canonical_id="ETF:US:NYSE:SPY", asset_type="ETF",
+        market="US", exchange_code="NYSE",
+        symbol="SPY", display_symbol="SPY", name="SPY",
+        quote_currency="USD", market_timezone="America/New_York", calendar="XNYS",
+        is_benchmark=True,
+    ))
+    await session.commit()
+
+    r = await client.get("/api/v1/signals/EQUITY:US:NASDAQ:AAPL", params={"horizon": "5D"})
+    assert r.status_code == 200, r.text
+    p = r.json()
+    assert p["asset_id"] == "EQUITY:US:NASDAQ:AAPL"
+    assert p["strategy_version"] == "ensemble-v1"
+    assert p["horizon"] == "5D"
+
+    r = await client.post("/api/v1/backtests", json={
+        "asset_canonical_id": "EQUITY:US:NASDAQ:AAPL",
+        "interval": "1d",
+        "horizon": "5D",
+        "entry_threshold": 20,
+        "exit_threshold": -5,
+    })
+    assert r.status_code == 201, r.text
+    run = r.json()
+    assert run["id"] > 0
+    assert "metrics" in run
+    assert "equity" in run
+
+    r2 = await client.get(f"/api/v1/backtests/{run['id']}")
+    assert r2.status_code == 200
+    assert r2.json()["id"] == run["id"]
+
+
+@pytest.mark.asyncio
 async def test_providers_status(client):
     r = await client.get("/api/v1/providers/status")
     assert r.status_code == 200

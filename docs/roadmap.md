@@ -30,13 +30,36 @@ Ordered per the product spec §20.
 - Data-freshness badge + provider-status panel in the UI
 - Celery `refresh_bars` beat job populates cache for tracked assets
 
-## Phase 3 — Signal + backtest engines
+## Phase 3 — Signal + backtest engines ✅
 
-- Explainable rule-based signal ensemble with factor contributions
-- Confidence calibration from historical out-of-sample performance
-- Walk-forward backtester with dated market-profile costs/slippage
-- Signal laboratory UI
-- Methodology docs (`docs/signal-methodology.md`, `docs/backtesting-methodology.md`)
+- Pure-function indicator library (SMA, EMA, MACD, RSI, ATR, realized vol,
+  MDD, momentum, breakout, rvol z-score, relative strength) with
+  hand-computed fixture tests
+- Rule-based ensemble `ensemble-v1` with trend / momentum / volatility /
+  volume / benchmark factors, versioned `SignalModel` interface
+- Signal engine: classification, heuristic confidence, ATR-based risk
+  class, reference entry/invalidation/take-profit levels (only when
+  defensible), full payload matching `packages/contracts/src/signals.ts`
+- API: `GET /signals/{id}?horizon=`, `POST /signals/calculate`;
+  persists `Signal` + `SignalFactor` rows with `data_version` + `strategy_version`
+- Walk-forward backtester with strict `available_at` no-lookahead
+  safeguard (asserted in tests), cost profiles per market, decision-at-t
+  execution at t+1 open, benchmarks (buy&hold, cash, SMA 50/200,
+  market benchmark)
+- API: `POST /backtests`, `GET /backtests/{id}`
+- Signal Laboratory page (`/lab/{id}`): factor bar chart, parameter form,
+  cost overrides, equity-curve chart, metrics vs baselines
+- Signal card on asset detail
+- Methodology docs: `signal-methodology.md`, `backtesting-methodology.md`,
+  `model-risk-management.md`
+
+Deferred to a Phase 3.1 backlog:
+
+- Walk-forward *parameter search* with locked out-of-sample verification
+- Fundamentals overlays (needs paid data), crypto-specific overlays
+  (funding rate / open interest)
+- Point-in-time universe membership for VN delistings
+- Empirically-calibrated confidence table
 
 ## Phase 4 — AI research agent
 

@@ -41,18 +41,77 @@ export interface Signal {
   confidence: number; // 0..1 (calibrated)
   risk: RiskClass;
   expected_holding_days: number;
-  entry_zone?: [string, string];
-  invalidation?: string;
-  take_profit?: string[];
+  entry_zone: [string, string] | null;
+  invalidation: string | null;
+  take_profit: string[] | null;
   positive_factors: SignalFactor[];
   negative_factors: SignalFactor[];
   contradictions: string[];
   liquidity_warnings: string[];
   data_quality_score: number; // 0..1
   regime: string;
-  backtest?: BacktestSummary;
+  backtest?: BacktestSummary | null;
   strategy_version: string;
   data_version: string;
   generated_at: string;
   disclaimer: string;
+}
+
+export interface BacktestMetrics {
+  total_return: number;
+  cagr: number;
+  volatility: number;
+  sharpe: number;
+  sortino: number;
+  max_drawdown: number;
+  calmar: number;
+  win_rate: number;
+  profit_factor: number | "inf";
+  turnover: number;
+  trades: number;
+  avg_holding_bars: number;
+  exposure: number;
+  hit_rate: number;
+  buy_hold_return: number;
+  cash_return: number;
+  sma_baseline_return: number;
+  benchmark_return: number | null;
+  bars_bull: number;
+  bars_bear: number;
+  bars_neutral: number;
+  warnings?: string[];
+}
+
+export interface BacktestTrade {
+  entry_time: string;
+  entry_price: number;
+  exit_time: string;
+  exit_price: number;
+  bars_held: number;
+  pnl_pct: number;
+  cost_pct: number;
+  reason: string;
+}
+
+export interface BacktestEquityPoint {
+  t: string;
+  strategy: number;
+  buy_hold: number;
+  in_position: boolean;
+}
+
+export interface BacktestResult {
+  id: number;
+  asset_id: number | string;
+  horizon: "1D" | "5D" | "20D";
+  interval: string;
+  start_time: string;
+  end_time: string;
+  cost_bps: string;
+  slippage_bps: string;
+  params: Record<string, unknown>;
+  metrics: BacktestMetrics;
+  warnings?: string[];
+  trades: BacktestTrade[];
+  equity: BacktestEquityPoint[];
 }

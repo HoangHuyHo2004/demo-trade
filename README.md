@@ -8,7 +8,7 @@ Supports US equities, Vietnamese equities (HOSE/HNX/UPCOM), and spot crypto.
 
 ---
 
-## Status: **Phase 1 — Foundation ✅** · **Phase 2 — Market data + charts ✅**
+## Status: **Phase 1 ✅** · **Phase 2 ✅** · **Phase 3 — Signal + backtest engines ✅**
 
 Phase 1 (foundation):
 
@@ -41,9 +41,29 @@ Phase 2 (this iteration — market data + charts):
 - US + VN holidays for 2025–2027; half-day sessions still deferred
 - 29 pytest tests (added Coinbase mock-HTTP tests, bar-repository tests, calendar-holiday tests)
 
+Phase 3 (this iteration — signal + backtest engines):
+
+- Pure-function indicator library (SMA, EMA, MACD, RSI, ATR, realized vol,
+  MDD, momentum, breakout, rvol z-score, relative strength) — fully unit-tested
+- **`ensemble-v1`** rule-based signal model with trend / momentum / volatility /
+  volume / benchmark factors; versioned `SignalModel` interface
+- Signal engine with classification, heuristic confidence, ATR-based risk class,
+  reference entry / invalidation / take-profit (only when defensible), full
+  payload matching `packages/contracts/src/signals.ts`
+- **Walk-forward backtester** with `available_at` no-lookahead guard (asserted
+  in tests), per-market cost profiles, benchmarks (buy&hold, cash, SMA 50/200,
+  market benchmark)
+- API: `GET /signals/{id}`, `POST /signals/calculate`, `POST /backtests`,
+  `GET /backtests/{id}`; persists `signals`, `signal_factors`, `backtest_runs`,
+  `backtest_trades`, `backtest_equity_points`
+- **Signal Laboratory** UI (`/lab/{id}`) with factor bar chart, parameter form,
+  cost overrides, equity-curve chart, metrics vs baselines
+- Methodology docs: `signal-methodology.md`, `backtesting-methodology.md`,
+  `model-risk-management.md`
+- 56 pytest tests total (indicators, engine, backtester, API smoke)
+
 **Not yet implemented (deferred to later phases per spec §20):**
 
-- Signal engine, backtester, signal laboratory (Phase 3)
 - AI research agent, filings/news retrieval, prompt-injection defenses (Phase 4)
 - Paper portfolio, VaR, stress tests (Phase 5)
 - Playwright E2E, full a11y sweep, production auth (Auth.js/OIDC)
