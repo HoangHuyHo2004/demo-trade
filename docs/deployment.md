@@ -102,11 +102,41 @@ The API middleware sets `Strict-Transport-Security` only when
 - Alembic migrations run on release from the api image:
   `alembic upgrade head`. Run once per release; CI verifies from-empty
   compatibility (`.github/workflows/ci.yml`).
-- **TODO:** production auth (currently a demo-user cookie). Recommended:
-  Auth.js (OIDC) fronting the Next.js app; API validates the session
-  cookie against Auth.js's session endpoint or a shared JWT signing key.
-  The demo cookie flow in `app/deps.py::get_current_user` must be
-  gated by `DEMO_MODE` before shipping.
+
+## Authentication
+
+Auth.js v5 in the Next.js app issues HS256-signed JWT session cookies
+using a shared `AUTH_SECRET`. FastAPI (`app/core/auth.py`) verifies the
+same token with PyJWT — no round-trip to the web app is needed.
+
+Requirements for production:
+
+- `AUTH_SECRET` — 32+ random bytes (`openssl rand -base64 32`). Must be
+  **identical** in the web and api containers; docker-compose does this
+  automatically via env-var interpolation.
+- `AUTH_GITHUB_ID` + `AUTH_GITHUB_SECRET` — register a GitHub OAuth App
+  with callback URL `https://your-host/api/auth/callback/github`.
+- `AUTH_URL` — canonical origin of the web app (e.g. `https://demo-trade.example.com`).
+- `DEMO_MODE=false` — closes the demo-login endpoint and the
+  auto-provision fallback in `deps.get_current_user`.
+
+Cookie flags:
+- `HttpOnly`, `SameSite=Lax`, `Secure` in production (set automatically
+  when `APP_ENV=production`).
+- Cookie name is configurable via `AUTH_COOKIE_NAME`; defaults to
+  `demo-trade.session`.
+
+Cross-origin cookie: the web (e.g. `demo-trade.example.com`) and api
+(`api.demo-trade.example.com`) must share an eTLD+1 so the browser sends
+the session cookie to both. Set cookie `Domain=.demo-trade.example.com`
+in `apps/web/src/auth.ts` when you promote past `localhost`. Same-origin
+deployment (Next.js reverse-proxying `/api/v1/*` to FastAPI) sidesteps
+this and is the simplest topology.
+
+Adding another OIDC provider: import from `next-auth/providers/{name}`
+and push into the `providers` array in `apps/web/src/auth.ts`. The API
+side needs no changes — providers appear as the `provider` claim in the
+JWT and are stored on `users.oauth_provider`.
 
 ## Observability
 

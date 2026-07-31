@@ -16,3 +16,5 @@ class User(Base, TimestampMixin):
     base_currency: Mapped[str] = mapped_column(String(3), nullable=False, default="USD")
     locale: Mapped[str] = mapped_column(String(8), nullable=False, default="en")
     timezone: Mapped[str] = mapped_column(String(64), nullable=False, default="UTC")
+    oauth_provider: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    oauth_account_id: Mapped[str | None] = mapped_column(String(128), nullable=True)

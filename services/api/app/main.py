@@ -12,6 +12,7 @@ from sqlalchemy import text
 from app.api.v1 import (
     agent,
     assets,
+    auth,
     backtests,
     markets,
     portfolios,
@@ -111,3 +112,4 @@ app.include_router(backtests.router, prefix="/api/v1/backtests", tags=["backtest
 app.include_router(agent.router, prefix="/api/v1/agent", tags=["agent"])
 app.include_router(research.router, prefix="/api/v1/research", tags=["research"])
 app.include_router(portfolios.router, prefix="/api/v1/portfolios", tags=["portfolios"])
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])

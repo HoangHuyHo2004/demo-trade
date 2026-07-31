@@ -8,7 +8,7 @@ Supports US equities, Vietnamese equities (HOSE/HNX/UPCOM), and spot crypto.
 
 ---
 
-## Status: **Phase 1 ✅** · **Phase 2 ✅** · **Phase 3 ✅** · **Phase 4 ✅** · **Phase 5 — Paper portfolio + hardening ✅**
+## Status: **Phase 1 ✅** · **Phase 2 ✅** · **Phase 3 ✅** · **Phase 4 ✅** · **Phase 5 ✅** · **Phase 5.1 — Production auth ✅**
 
 Phase 1 (foundation):
 
@@ -115,11 +115,32 @@ Phase 5 (this iteration — paper portfolio + production hardening):
   math, cash flow accounting, valuation end-to-end, security headers,
   request-ID, in-memory rate limiter, end-to-end rate-limit trip)
 
+Phase 5.1 (this iteration — production auth):
+
+- **Auth.js v5** in the web app with GitHub OIDC + demo-credentials
+  providers. Session cookie is an **HS256-signed JWT** using a shared
+  `AUTH_SECRET`, so FastAPI verifies it with PyJWT — no round-trip.
+- Migration 0006: `users.oauth_provider` + `users.oauth_account_id`
+  with a partial unique index; users are upserted by (provider, subject)
+  on first login.
+- `app/core/auth.py`: session issuer + verifier with strict claim
+  requirements (exp, sub) and a maximum-TTL safety cap so a leaked
+  secret can't mint infinite-lived tokens.
+- Updated `deps.get_current_user`: cookie or Bearer JWT first, demo
+  auto-provision fallback only when `DEMO_MODE=true`; explicit bad
+  cookies still 401 (fail closed).
+- New endpoints: `GET /api/v1/auth/me`, `POST /api/v1/auth/demo-login`
+  (demo-mode only), `POST /api/v1/auth/logout`.
+- Web: `/signin` server page + `AuthButton` in top nav + middleware
+  that redirects unauthenticated users (auth handlers + static allowed).
+- Docker Compose plumbs the shared secret into both containers.
+- 99 pytest tests total (added 10 auth tests: JWT roundtrip, wrong
+  secret, expired, missing exp, too-far-future TTL, /me demo-off,
+  demo-login flow, Bearer header, invalid cookie 401, logout clears)
+
 **Not yet implemented (Phase 4.1 / Phase 5.1 backlog):**
 
 - SEC/VN filings retrieval + `pgvector` RAG (Phase 4.1)
-- Production auth (Auth.js / OIDC) — the demo cookie remains, gated by
-  `DEMO_MODE`; see `docs/deployment.md`
 - Playwright critical-flow tests + WCAG sweep
 - OpenTelemetry traces + Prometheus metrics endpoint
 - Runtime-configurable rate-limit rules

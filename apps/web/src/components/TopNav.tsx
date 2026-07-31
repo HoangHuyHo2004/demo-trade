@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AuthButton } from "./AuthButton";
 
 export function TopNav() {
   return (
@@ -7,14 +8,17 @@ export function TopNav() {
         <Link href="/" className="font-semibold tracking-tight">
           DEMO-TRADE
         </Link>
-        <nav className="flex gap-4 text-sm">
-          <Link href="/" className="hover:underline">Dashboard</Link>
-          <Link href="/watchlist" className="hover:underline">Watchlist</Link>
-          <Link href="/search" className="hover:underline">Search</Link>
-          <Link href="/compare" className="hover:underline">Compare</Link>
-          <Link href="/research" className="hover:underline">Research</Link>
-          <Link href="/portfolio" className="hover:underline">Portfolio</Link>
-        </nav>
+        <div className="flex items-center gap-4">
+          <nav className="flex gap-4 text-sm">
+            <Link href="/" className="hover:underline">Dashboard</Link>
+            <Link href="/watchlist" className="hover:underline">Watchlist</Link>
+            <Link href="/search" className="hover:underline">Search</Link>
+            <Link href="/compare" className="hover:underline">Compare</Link>
+            <Link href="/research" className="hover:underline">Research</Link>
+            <Link href="/portfolio" className="hover:underline">Portfolio</Link>
+          </nav>
+          <AuthButton />
+        </div>
       </div>
     </header>
   );
