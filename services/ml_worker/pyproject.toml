@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "demo-trade-ml-worker"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+  # Shared with the api service (imported via PYTHONPATH), listed
+  # explicitly so this pyproject is standalone-installable.
+  "sqlalchemy[asyncio]>=2.0.30",
+  "aiosqlite>=0.20",
+  "asyncpg>=0.29",
+  "pydantic>=2.7",
+  "pydantic-settings>=2.4",
+  "structlog>=24.1",
+  # Job queue
+  "celery[redis]>=5.4",
+  # ML
+  "scikit-learn>=1.5",
+  "numpy>=1.26",
+  "pandas>=2.2",
+  "joblib>=1.4",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.2", "pytest-asyncio>=0.23", "ruff>=0.5"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["mlw*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "N", "C4", "SIM"]
+# N806: X/Xt/Xv/X_train are the standard sklearn convention for feature
+# matrices — fighting that convention hurts readability for ML code.
+# SIM108: the if/else in the calibration-bin loop reads clearer than
+# the ternary it would collapse to.
+ignore = ["E501", "N806", "N803", "SIM108"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["N", "RUF059"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -9,6 +9,7 @@ import { Card } from "@/components/Card";
 import { FreshnessBadge } from "@/components/FreshnessBadge";
 import { PriceChart } from "@/components/PriceChart";
 import { SignalCard } from "@/components/SignalCard";
+import { MLPredictionCard } from "@/components/MLPredictionCard";
 import { fmtNumber, fmtTime } from "@/lib/format";
 import { PERIODS, periodByKey, periodReturn, type PeriodKey } from "@/lib/periods";
 
@@ -126,6 +127,10 @@ export default function AssetPage() {
           <SignalCard assetId={id} horizon="5D" />
         </Card>
       </div>
+
+      <Card title="ML prediction (shadow)">
+        <MLPredictionCard assetId={id} horizon="5D" />
+      </Card>
 
       <Card
         title={`Chart · ${p.interval} · ${p.label}`}

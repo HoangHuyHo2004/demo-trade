@@ -66,12 +66,53 @@ pnpm dev
 Requires the API to be reachable at `NEXT_PUBLIC_API_BASE_URL`
 (defaults to http://localhost:8000).
 
+## ML worker only (Python, scikit-learn)
+
+Only needed to exercise `POST /api/v1/ml/train` or the scheduled
+prediction/evaluation tasks — everything else works without it (the ML
+endpoints degrade to `INSUFFICIENT_DATA` / `503` gracefully).
+
+```bash
+cd services/ml_worker
+python -m venv .venv && . .venv/Scripts/activate   # or source .venv/bin/activate
+pip install -e .[dev]
+
+# Shares app.ml.* with the api service via PYTHONPATH — must include
+# ../api so `from app.ml.datasets import build_dataset` resolves.
+export PYTHONPATH=../api:.
+export DATABASE_URL=postgresql+asyncpg://demotrade:demotrade@localhost:5432/demotrade
+
+# Dedicated Redis DB indices, different from the market-data worker's
+# (1, 2) — otherwise the two Celery apps misroute each other's tasks
+# over the same broker namespace.
+export CELERY_BROKER_URL=redis://localhost:6379/3
+export CELERY_RESULT_BACKEND=redis://localhost:6379/4
+export ML_ARTIFACT_DIR=./ml-artifacts
+
+celery -A mlw.celery_app:app worker -B --loglevel=INFO
+```
+
+For `POST /api/v1/ml/train` (run against the api process) to actually
+reach this worker, the **api** process needs the same
+`CELERY_BROKER_URL`/`CELERY_RESULT_BACKEND` env vars set — otherwise
+`mlw.celery_app`'s `send_task` call falls back to its module default
+(`localhost:6379/1`), which is the wrong DB.
+
 ## Tests
 
 Backend:
 
 ```bash
 cd services/api
+pytest
+```
+
+ML worker (needs its own venv with scikit-learn — see above; the api's
+`pytest` run above already covers the pure-Python ML pipeline in
+`app/ml/*` without needing sklearn):
+
+```bash
+cd services/ml_worker
 pytest
 ```
 

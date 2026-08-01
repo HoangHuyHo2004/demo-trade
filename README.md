@@ -8,7 +8,7 @@ Supports US equities, Vietnamese equities (HOSE/HNX/UPCOM), and spot crypto.
 
 ---
 
-## Status: **Phase 1 ✅** · **Phase 2 ✅** · **Phase 3 ✅** · **Phase 4 ✅** · **Phase 5 ✅** · **Phase 5.1 ✅** · **Phase 5.2 — Spec gap-fill ✅**
+## Status: **Phase 1 ✅** · **Phase 2 ✅** · **Phase 3 ✅** · **Phase 4 ✅** · **Phase 5 ✅** · **Phase 5.1 ✅** · **Phase 5.2 ✅** · **ML Phase 1 — Baseline models (shadow-only) ✅**
 
 Phase 1 (foundation):
 
@@ -165,17 +165,59 @@ Phase 5.2 (this iteration — spec gap-fill):
 - **109 pytest tests total** (added 10 new: jobs lifecycle + inline
   runner + endpoint round-trip + settings CRUD).
 
-**Not yet implemented (Phase 4.1 / Phase 5.1 backlog):**
+ML Phase 1 (this iteration — baseline models, shadow-only):
+
+- **New service `services/ml_worker`** — separate Celery app carrying
+  scikit-learn/joblib/pandas so the low-latency `api` service stays
+  free of ~150MB of ML deps. Shares the api's pure-Python pipeline
+  code (`app/ml/*`) via `PYTHONPATH`.
+- **Point-in-time feature pipeline** (`app/ml/features.py`) — 28
+  features (returns, trend, momentum, volatility, volume, benchmark-
+  relative), every one a pure function of a truncated bar prefix, so
+  lookahead is structurally impossible rather than policy-enforced.
+- **Cost-adjusted labels** (`app/ml/labels.py`) — direction (with a
+  neutral zone that widens with assumed transaction cost), future
+  return, future volatility, future max drawdown.
+- **Deterministic dataset builder** (`app/ml/datasets.py`) —
+  `available_at`-gated bar loading, versioned `dataset_version` hash,
+  walk-forward fold generator (expanding train / rolling validation /
+  embargo gap).
+- **Baseline models**: `logreg`, `rf`, `gbm` — trained, validated per
+  fold, probability-calibrated (isotonic/sigmoid on the validation
+  fold, never the test set), persisted with a sha256-checked artifact.
+- **Model registry** (`ml_models` table) with an
+  EXPERIMENTAL→SHADOW→CHAMPION/CHALLENGER/DISABLED state machine.
+  **Only `SHADOW`/`CHAMPION` models generate predictions, and no ML
+  prediction is ever merged into the rule-based `Signal` in Phase 1**
+  — they're served from a completely separate table and endpoint.
+- API: `GET/POST /api/v1/ml/*` (reads open to any signed-in user;
+  train/promote/disable require `users.is_admin`, seeded true for the
+  demo user in `DEMO_MODE`).
+- Web: `MLPredictionCard` on asset detail, permanently labeled
+  `SHADOW · does not influence signal`.
+- **11 required ML docs** written accurately against what's actually
+  built, not aspirationally — see `docs/ml-limitations.md` first.
+- **143 api pytest tests total** (+34 for the ML pipeline: feature
+  determinism, label no-lookahead, dataset point-in-time correctness,
+  walk-forward fold structure, API admin-gating).
+- **12 ml_worker pytest tests** run against real scikit-learn on
+  synthetic data with a genuine signal (not just import checks) —
+  caught and fixed two real bugs in the process: an undefined-variable
+  crash in the contribution-generation code, and a scikit-learn 1.6+
+  breaking change (`CalibratedClassifierCV(cv="prefit")` removal,
+  fixed with a version-compatible `FrozenEstimator` fallback).
+
+**Not yet implemented:**
 
 - SEC/VN filings retrieval + `pgvector` RAG (Phase 4.1)
-- Playwright critical-flow tests + WCAG sweep
 - OpenTelemetry traces + Prometheus metrics endpoint
 - Runtime-configurable rate-limit rules
 - Tax-lot cost accounting (FIFO/LIFO/specific-lot)
-- Paper portfolio, VaR, stress tests (Phase 5)
-- Playwright E2E, full a11y sweep, production auth (Auth.js/OIDC)
-- pgvector, object storage
 - Half-day session calendars, SSI FastConnect OAuth flow, Alpaca WebSocket ingest
+- ML ensemble integration, out-of-distribution detection, drift
+  monitoring, champion/challenger comparison, agent ML explanation
+  tool, model-performance dashboard (all explicitly later ML phases
+  per spec — see `docs/roadmap.md`)
 
 ---
 
@@ -218,11 +260,32 @@ pnpm install
 pnpm dev
 ```
 
+ML worker (optional — only needed to exercise `POST /api/v1/ml/train`):
+
+```bash
+cd services/ml_worker
+python -m venv .venv && . .venv/Scripts/activate
+pip install -e .[dev]
+export PYTHONPATH=../api:.
+export DATABASE_URL=postgresql+asyncpg://demotrade:demotrade@localhost:5432/demotrade
+# Dedicated DB indices — different from the market-data `worker`
+# service's (1, 2), otherwise both Celery apps misroute each other's
+# tasks over the same broker namespace. The api service must set the
+# same CELERY_BROKER_URL/CELERY_RESULT_BACKEND for POST /ml/train to
+# actually reach this worker (see docker-compose.yml for the wiring).
+export CELERY_BROKER_URL=redis://localhost:6379/3
+export CELERY_RESULT_BACKEND=redis://localhost:6379/4
+celery -A mlw.celery_app:app worker -B --loglevel=INFO
+```
+
 ## Tests
 
 ```bash
-# Python
+# API (includes ML pipeline tests — no sklearn needed, pure functions only)
 cd services/api && pytest
+
+# ML worker (requires scikit-learn — separate venv, see above)
+cd services/ml_worker && pytest
 
 # Web
 cd apps/web && pnpm test
@@ -232,12 +295,13 @@ cd apps/web && pnpm test
 
 ```
 apps/web              Next.js frontend
-services/api          FastAPI backend (auth, providers, signals API surface)
-services/worker       Celery worker + beat (ingest jobs)
+services/api          FastAPI backend (auth, providers, signals, ML pipeline)
+services/worker       Celery worker + beat (market-data ingest jobs)
+services/ml_worker     Celery worker for ML training/inference (scikit-learn)
 packages/contracts    Shared TS types (asset id, signal payload shapes)
 packages/config       Shared TS runtime config
 infra                 Dockerfiles and infra manifests
-docs                  Architecture, methodology, compliance docs
+docs                  Architecture, methodology, compliance, ML docs
 scripts               Repo-level utilities
 tests                 Cross-service smoke tests
 ```
@@ -249,3 +313,5 @@ tests                 Cross-service smoke tests
 - [`docs/data-providers.md`](docs/data-providers.md)
 - [`docs/roadmap.md`](docs/roadmap.md)
 - [`docs/compliance-considerations.md`](docs/compliance-considerations.md)
+- [`docs/ml-architecture.md`](docs/ml-architecture.md) — ML subsystem pipeline
+- [`docs/ml-limitations.md`](docs/ml-limitations.md) — **read before trusting any ML output**

@@ -34,6 +34,11 @@ services:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-demotrade}:${POSTGRES_PASSWORD:-demotrade}@postgres:5432/${POSTGRES_DB:-demotrade}
       ALEMBIC_DATABASE_URL: postgresql://${POSTGRES_USER:-demotrade}:${POSTGRES_PASSWORD:-demotrade}@postgres:5432/${POSTGRES_DB:-demotrade}
       REDIS_URL: redis://redis:6379/0
+      # Must match ml_worker's broker/backend below — POST /api/v1/ml/train
+      # sends a task via mlw.celery_app, which needs the SAME broker DB the
+      # ml_worker container is consuming from.
+      CELERY_BROKER_URL: redis://redis:6379/3
+      CELERY_RESULT_BACKEND: redis://redis:6379/4
     depends_on:
       postgres:
         condition: service_healthy
@@ -64,6 +69,27 @@ services:
         condition: service_healthy
     command: celery -A worker.celery_app:app worker -B --loglevel=INFO
 
+  ml_worker:
+    build:
+      context: .
+      dockerfile: infra/ml_worker.Dockerfile
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-demotrade}:${POSTGRES_PASSWORD:-demotrade}@postgres:5432/${POSTGRES_DB:-demotrade}
+      # Dedicated DB indices — MUST differ from the `worker` service's
+      # (1, 2) or both Celery apps will pull from the same broker
+      # namespace and misroute each other's tasks.
+      CELERY_BROKER_URL: redis://redis:6379/3
+      CELERY_RESULT_BACKEND: redis://redis:6379/4
+      ML_ARTIFACT_DIR: /var/lib/demo-trade/ml
+    depends_on:
+      api:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    volumes:
+      - ml_artifacts:/var/lib/demo-trade/ml
+
   web:
     build:
       context: .
@@ -88,3 +114,4 @@ services:
 
 volumes:
   pgdata:
+  ml_artifacts:

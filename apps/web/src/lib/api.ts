@@ -5,6 +5,7 @@ import type {
   BacktestResult,
   BarsResponse,
   MarketStatus,
+  MLPredictionResponse,
   PortfolioDetail,
   PortfolioRisk,
   PortfolioSummary,
@@ -107,6 +108,11 @@ export const api = {
   getPortfolioRisk: (id: number, lookback_days = 180) =>
     req<PortfolioRisk>(
       `/api/v1/portfolios/${id}/risk?lookback_days=${lookback_days}`
+    ),
+  getMLPrediction: (id: string, horizon?: "1D" | "5D" | "20D") =>
+    req<MLPredictionResponse>(
+      `/api/v1/ml/predictions/${encodeURIComponent(id)}` +
+        (horizon ? `?horizon=${horizon}` : "")
     ),
   getSettings: () => req<UserSettingsShape>(`/api/v1/settings`),
   patchSettings: (body: Partial<UserSettingsShape>) =>

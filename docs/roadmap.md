@@ -141,6 +141,68 @@ Deferred to Phase 4.1:
   `docs/api.md`, `docs/security.md`, `docs/ai-agent.md`.
 - 109 pytest tests; 8 migrations apply from empty.
 
+## ML Phase 1 — Data + baseline models (shadow-only) ✅
+
+Machine-learning subsystem that **supplements** the rule-based signal
+engine — never merged into it. See `docs/ml-architecture.md` for the
+full pipeline diagram and `docs/ml-limitations.md` before trusting any
+number it produces.
+
+- Migration 0009: `users.is_admin` + `ml_models` (registry with
+  EXPERIMENTAL/VALIDATED/SHADOW/CHAMPION/CHALLENGER/DEGRADED/DISABLED/
+  RETIRED state machine) + `ml_datasets` + `ml_training_runs` +
+  `ml_predictions` (saved before outcomes are known, immutable) +
+  `ml_prediction_outcomes` (honest post-hoc scoring, never rewrites)
+- `app/ml/features.py`: 28-feature pure-function pipeline (returns,
+  trend, momentum, volatility, volume, benchmark-relative) —
+  deterministic, no lookahead by construction (functions only ever see
+  a truncated prefix of the bar series)
+- `app/ml/labels.py`: cost-adjusted direction label + regression /
+  volatility / drawdown targets, all computed from `closes[t:t+horizon+1]`
+  only
+- `app/ml/datasets.py`: point-in-time dataset builder
+  (`available_at`-gated) + deterministic `dataset_version` hashing +
+  walk-forward fold generator (expanding train, rolling val, embargo
+  gap)
+- **New service `services/ml_worker`**: separate Celery app carrying
+  scikit-learn/joblib so the api stays lean. Baselines: `logreg`, `rf`,
+  `gbm` (ridge reserved for regression, not yet trained). Isotonic/
+  sigmoid probability calibration on the validation fold via
+  `CalibratedClassifierCV` (version-compatible across sklearn
+  ≥1.5 including the 1.6+ `FrozenEstimator` API change).
+  Signed per-feature contributions for linear models; honest
+  "unsigned importance only" fallback + warning for tree models (no
+  SHAP dependency in Phase 1).
+- API: `GET /api/v1/ml/models[/{id}[/metrics]]`,
+  `GET /api/v1/ml/predictions/{id}[/history]`,
+  `POST /api/v1/ml/train` (admin, enqueues Celery task, 503 if broker
+  unreachable), `POST /models/{id}/{shadow,promote,disable}` (admin)
+- Web: `MLPredictionCard` on asset detail — permanently labeled
+  `SHADOW · does not influence signal`, shows probability, expected-
+  return band, confidence, positive/negative contributors, and the
+  model/data version footer
+- Docs: all 11 spec-required ML docs (`ml-architecture`, `ml-datasets`,
+  `ml-feature-dictionary`, `ml-targets`, `ml-validation`,
+  `ml-model-registry`, `ml-model-risk`, `ml-monitoring`,
+  `ml-retraining`, `ml-explainability`, `ml-limitations`)
+- 34 new api pytest tests (features, labels, datasets, walk-forward
+  folds, API admin-gating) — **143 total**, all green
+- 12 ml_worker pytest tests against real scikit-learn (model fit/
+  predict, signed contributions, save/load roundtrip, end-to-end
+  training + calibration on synthetic data with a real signal) — found
+  and fixed two real bugs during test-writing: an undefined-variable
+  crash in contribution generation, and a scikit-learn 1.6+ API
+  incompatibility (`cv="prefit"` removal)
+
+**Deferred to ML Phase 2+** (per spec's own phased order): ensemble
+integration (mixing ML output into the rule-based signal), out-of-
+distribution detection, champion/challenger automated comparison,
+drift monitoring + auto-disable, the AI agent explaining ML output (no
+`get_ml_prediction` tool yet), similar-pattern/nearest-neighbor search,
+behavior profiles, fundamental/corporate-event/macro feature groups,
+hyperparameter search, XGBoost/LightGBM/deep learning, and the
+admin model-performance dashboard.
+
 ## Backlog (post-MVP)
 
 - pgvector RAG for SEC filings + VN disclosures + news (Phase 4.1)
@@ -148,6 +210,9 @@ Deferred to Phase 4.1:
 - Anthropic streaming responses in the UI
 - Walk-forward parameter search with locked out-of-sample verification
 - Empirically-calibrated confidence table for `ensemble-v1`
+- ML Phase 2: ensemble integration, OOD detection, calibration-gated promotion
+- ML Phase 3: drift monitoring, champion/challenger, auto-disable
+- ML Phase 4: model-performance admin dashboard, agent ML explanation tool
 - OpenTelemetry traces + Prometheus metrics endpoint
 - Runtime-configurable rate-limit rules
 - Tax-lot cost accounting (FIFO/LIFO/specific-lot)

@@ -131,6 +131,34 @@ Statuses: `QUEUED`, `COLLECTING_DATA`, `CALCULATING`,
 
 See `docs/ai-agent.md`.
 
+## Machine learning (ML Phase 1 — shadow-only)
+
+Reads are open to any signed-in user. Writes (`train`, `promote`,
+`shadow`, `disable`) require `users.is_admin = true` (403 otherwise).
+See `docs/ml-architecture.md` for the pipeline and
+`docs/ml-limitations.md` before trusting any output.
+
+- `GET /api/v1/ml/models` — list all registered models
+- `GET /api/v1/ml/models/{id}` — one model
+- `GET /api/v1/ml/models/{id}/metrics` — model + its training-run history
+- `GET /api/v1/ml/predictions/{canonical_id}?horizon=` — latest
+  prediction, or `{status: "INSUFFICIENT_DATA"}` if none exists
+- `GET /api/v1/ml/predictions/{canonical_id}/history?limit=` — past
+  predictions for this asset (append-only, never rewritten)
+- `POST /api/v1/ml/train` (admin) — body: `{market, horizon, family,
+  cost_bps, seed, calibrate}`. Enqueues a Celery task on `ml_worker`;
+  returns `202 {status: "queued", task_id}` or `503` if the broker is
+  unreachable.
+- `POST /api/v1/ml/models/{id}/shadow` (admin) — force `SHADOW` state
+- `POST /api/v1/ml/models/{id}/promote` (admin) — `SHADOW → CHAMPION`;
+  demotes any existing champion for the same `(market, horizon, task)`
+  to `CHALLENGER`
+- `POST /api/v1/ml/models/{id}/disable` (admin) — any state → `DISABLED`
+
+**Every ML prediction response carries `shadow_only: true` and a
+disclaimer.** No ML output is merged into `GET /api/v1/signals/{id}` —
+they are served from entirely separate tables and endpoints.
+
 ## Settings (spec §12 + §16)
 
 - `GET /api/v1/settings`

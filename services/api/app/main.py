@@ -26,6 +26,9 @@ from app.api.v1 import (
     jobs as jobs_v1,
 )
 from app.api.v1 import (
+    ml as ml_v1,
+)
+from app.api.v1 import (
     settings as settings_v1,
 )
 from app.core.config import get_settings
@@ -121,3 +124,4 @@ app.include_router(portfolios.router, prefix="/api/v1/portfolios", tags=["portfo
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(jobs_v1.router, prefix="/api/v1/jobs", tags=["jobs"])
 app.include_router(settings_v1.router, prefix="/api/v1/settings", tags=["settings"])
+app.include_router(ml_v1.router, prefix="/api/v1/ml", tags=["ml"])

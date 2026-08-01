@@ -44,10 +44,10 @@ def compute_labels(
     if t < 0 or t + horizon >= n:
         return LabelSet(None, None, None, None)
     c0 = closes[t]
-    cH = closes[t + horizon]
-    if c0 <= 0 or cH <= 0:
+    c_h = closes[t + horizon]
+    if c0 <= 0 or c_h <= 0:
         return LabelSet(None, None, None, None)
-    fwd_ret = math.log(cH / c0)
+    fwd_ret = math.log(c_h / c0)
 
     # Direction with cost-adjusted neutral zone (spec §Target construction).
     round_trip = 2.0 * cost_bps / 10_000.0
